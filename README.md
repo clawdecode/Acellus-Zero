@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="fck.png" alt="Acellus-Zero" width="100%" />
+<img src="fck.png" alt="Acellus-Zero" width="600" style="max-width: 100%; height: auto;" />
 
 # Acellus-Zero
 
