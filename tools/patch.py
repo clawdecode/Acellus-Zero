@@ -63,6 +63,12 @@ PATCH_LIST = [
         "desc": "Enables Chrome DevTools (chrome://inspect) and bypasses anti-devtools traps.",
     },
     {
+        "id":   "allow-paste",
+        "name": "Allow Paste & Clipboard",
+        "tag":  "MOD",
+        "desc": "Unblocks copy/paste and right-click context menus in essays and text fields.",
+    },
+    {
         "id":   "math-tiles-only",
         "name": "Math Tiles Helper Only",
         "tag":  "MOD",
@@ -72,7 +78,7 @@ PATCH_LIST = [
         "id":   "all-in-one",
         "name": "All-In-One Bundle",
         "tag":  "RECOMMENDED",
-        "desc": "Full suite: Math Tiles Solver + Chrome DevTools + scrcpy mirroring in one APK.",
+        "desc": "Full suite: Allow Paste + Math Tiles Solver + Chrome DevTools + scrcpy mirroring.",
     },
 ]
 
