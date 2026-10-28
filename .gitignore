@@ -1,16 +1,8 @@
-# Acellus-Zero .gitignore
-
-# Python cache
 __pycache__/
 *.py[cod]
-
-# OS & Editor artifacts
 .DS_Store
 Thumbs.db
 *.swp
 *.swo
 .vscode/
 .idea/
-
-# Decompiled build intermediates (optional, keep if you only want patches & docs tracked)
-# acellus_decoded/build/
