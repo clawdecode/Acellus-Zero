@@ -87,7 +87,7 @@ Run the interactive CLI patch installer:
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/Acellus-Zero.git
+git clone https://github.com/clawdecode/Acellus-Zero.git
 cd Acellus-Zero
 
 # Launch the patcher
@@ -143,7 +143,7 @@ The script automatically signs all splits, installs via `adb install-multiple`, 
 If this project saved you time, made your study workflows smoother, or helped you understand Android reverse engineering, consider supporting the project:
 
 - **Star this repository** on GitHub to help others discover it.
-- **Submit issues:** If you encounter unexpected behavior or need support for another mini-game activity, open an Issue.
+- **Submit issues:** If you encounter unexpected behavior or need support for another mini-game activity, open an [Issue](https://github.com/clawdecode/Acellus-Zero/issues).
 - **Pull Requests:** Contributions for additional game helpers, UI refinements, or documentation improvements are welcome.
 
 ---
