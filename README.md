@@ -17,8 +17,9 @@
   <a href="#math-tiles-instant-helper">Math Tiles Solver</a> •
   <a href="#quick-start">Quick Start</a> •
   <a href="#repository-stats">Repo Stats</a> •
+  <a href="docs/INTERNAL_FLAGS.md">Internal Flags</a> •
   <a href="#credits--acknowledgements">Credits</a> •
-  <a href="#legal-notice--disclaimer">Legal</a>
+  <a href="#legal-notice--compliance">Legal</a>
 </p>
 
 ---
