@@ -38,6 +38,7 @@ The stock client enforces window capture restrictions (`FLAG_SECURE`), blocks Ch
 - **Full Screen Mirroring:** Eliminates black screen capture restrictions for streaming via `scrcpy` and OBS.
 - **Chrome Remote DevTools:** Re-enables full Chromium inspection (`chrome://inspect`) to inspect live DOM, network requests, and React fiber components.
 - **Anti-DevTools Honeypot Bypass:** Neutralizes Acellus's console-inspection trap that triggers forced redirects and DOM wipes.
+- **Unrestricted Clipboard & Paste:** Eliminates paste blocking, context menu disabling, and enables Acellus's internal Writing Tutor developer flag.
 - **Instant Game Solver:** Built-in auto-solver for **Math Tiles** that eliminates the artificial 10-second wait delay, highlights winning target slots at 0.0s, and adds Spacebar auto-play.
 - **Interactive CLI Patcher:** Python installer that manages APK decompilation, signing, and ADB multi-split installation with a single keystroke.
 
@@ -49,8 +50,9 @@ The stock client enforces window capture restrictions (`FLAG_SECURE`), blocks Ch
 |:---|:---|:---:|
 | [`no-secure-flag`](patches/no-secure-flag/) | Removes `FLAG_SECURE` (`0x2000` -> `0x0`) so the app can be viewed in `scrcpy` and recorded without a black screen. | ![Ready](https://img.shields.io/badge/Status-Ready-brightgreen?style=flat-square) |
 | [`webview-debugging`](patches/webview-debugging/) | Enables `WebView.setWebContentsDebuggingEnabled(true)`, `android:debuggable="true"`, and local asset interception to bypass anti-devtools loops. | ![Ready](https://img.shields.io/badge/Status-Ready-brightgreen?style=flat-square) |
+| [`allow-paste`](patches/allow-paste/) | Unblocks copy/paste, right-click context menus, and enables the internal `WRITING_TUTOR_ALLOW_CHEATING` flag for essay fields. | ![Ready](https://img.shields.io/badge/Status-Ready-brightgreen?style=flat-square) |
 | [`math-tiles-only`](patches/math-tiles-only/) | Standalone game mod: bakes the Math Tiles instant solver into the APK without altering system security flags or debugging. | ![Ready](https://img.shields.io/badge/Status-Ready-brightgreen?style=flat-square) |
-| [`all-in-one`](patches/all-in-one/) | **The Complete Package:** Combines No Secure Flag + WebView Debugging + Instant Math Tiles Solver into a single unified build. | ![Recommended](https://img.shields.io/badge/Status-Recommended-blue?style=flat-square) |
+| [`all-in-one`](patches/all-in-one/) | **The Complete Package:** Combines No Secure Flag + WebView Debugging + Allow Paste + Instant Math Tiles Solver into a single unified build. | ![Recommended](https://img.shields.io/badge/Status-Recommended-blue?style=flat-square) |
 
 ---
 
