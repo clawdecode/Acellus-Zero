@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="fck.png" alt="Acellus-Zero" width="100%" />
+
 # Acellus-Zero
 
 **Modular patch suite, reverse engineering toolkit, and automation mods for the Android Acellus client (`com.acellus.acellus`).**
