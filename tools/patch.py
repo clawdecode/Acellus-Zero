@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 """
-Acellus-Zero Patcher
-Clean, modern CLI for managing and installing Acellus mods via ADB.
+Acellus-Zero Modular Patcher & ADB Installer
+Allows interactive installation of individual modular patches or the complete all-in-one suite.
+Includes real-time ADB device detection and Groq API key configuration.
 """
 
 import os
 import sys
-import subprocess
+import json
 import time
+import subprocess
+import shutil
 
-# ── Color & Styling ───────────────────────────────────────────────────────────
-
-os.system("") # Enable ANSI escape processing on Windows consoles
+# ── Color Palette ─────────────────────────────────────────────────────────────
 
 class C:
     RESET   = "\033[0m"
@@ -38,6 +39,7 @@ def clear():
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 BASE = os.path.join(ROOT, "base")
 PATCHES = os.path.join(ROOT, "patches")
+CONFIG_FILE = os.path.join(ROOT, "config.json")
 ADB = "adb"
 SIGNER = r"C:\apktool\signer.jar"
 APKTOOL = r"C:\apktool\apktool.jar"
@@ -78,7 +80,7 @@ PATCH_LIST = [
         "id":   "all-in-one",
         "name": "All-In-One Bundle",
         "tag":  "RECOMMENDED",
-        "desc": "Full suite: Allow Paste + Math Tiles Solver + Chrome DevTools + scrcpy mirroring.",
+        "desc": "Full suite: MC Auto-ESP Solver + Math Tiles Solver + Allow Paste + DevTools + Mirroring.",
     },
 ]
 
@@ -97,9 +99,8 @@ def status_fail(msg):
     print(f"  {C.RED}[-]{C.RESET} {C.BOLD}{msg}{C.RESET}")
 
 def run_quiet(cmd):
-    """Executes a command silently unless it fails."""
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True)
+        proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         return proc.returncode == 0, proc.stdout.strip(), proc.stderr.strip()
     except Exception as e:
         return False, "", str(e)
@@ -108,25 +109,73 @@ def check_adb_device():
     success, out, _ = run_quiet([ADB, "devices"])
     if not success:
         return None
-    lines = [l for l in out.splitlines() if l.strip() and "List of" not in l]
-    if not lines:
-        return None
-    device_line = lines[0].split()
-    if len(device_line) >= 2 and device_line[1] == "device":
-        return device_line[0]
-    return None
+    lines = [l for l in out.splitlines()[1:] if l.strip() and not l.startswith("*")]
+    devices = [l.split()[0] for l in lines if "device" in l]
+    return devices[0] if devices else None
 
-# ── Actions ───────────────────────────────────────────────────────────────────
+def get_groq_key():
+    saved_key = ""
+    if os.path.isfile(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                saved_key = data.get("groq_api_key", "").strip()
+        except Exception:
+            pass
+
+    key_hint = f" [{saved_key[:8]}...{saved_key[-4:]}]" if saved_key else " (leave blank to skip/keep default)"
+    print(f"\n  {C.YELLOW}[?] Optional: Enter your Groq API Key for Multiple Choice Auto-ESP{C.RESET}{C.DIM}{key_hint}{C.RESET}")
+    print(f"      {C.GRAY}Grab a free key anytime from https://console.groq.com/keys{C.RESET}")
+    key_input = input(f"      Key: ").strip()
+
+    if key_input:
+        saved_key = key_input
+        try:
+            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+                json.dump({"groq_api_key": saved_key}, f, indent=2)
+        except Exception:
+            pass
+
+    return saved_key
+
+def apply_groq_key_to_all_in_one(key):
+    clean_js = os.path.join(PATCHES, "all-in-one", "acellus_decoded", "assets", "index-clean.js")
+    if not os.path.isfile(clean_js):
+        return
+
+    with open(clean_js, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    prefix = f'window.__GROQ_KEY = "{key}";\n'
+    if 'window.__GROQ_KEY =' in content:
+        content = re.sub(r'window\.__GROQ_KEY\s*=\s*"[^"]*";\n?', prefix, content)
+    else:
+        content = prefix + content
+
+    with open(clean_js, "w", encoding="utf-8") as f:
+        f.write(content)
+
+    # Rebuild & re-sign all-in-one APK
+    p_dir = os.path.join(PATCHES, "all-in-one")
+    decoded = os.path.join(p_dir, "acellus_decoded")
+    raw_apk = os.path.join(p_dir, "acellus_patched.apk")
+
+    status_step("Compiling APK with your configured API key...")
+    subprocess.run(["java", "-jar", APKTOOL, "b", decoded, "-o", raw_apk], check=True, stdout=subprocess.DEVNULL)
+    status_step("Signing patched APK...")
+    subprocess.run(["java", "-jar", SIGNER, "-a", raw_apk, "-o", p_dir], check=True, stdout=subprocess.DEVNULL)
+    status_ok("All-In-One APK prepared with your private key!")
+
+# ── Banner & UI ───────────────────────────────────────────────────────────────
 
 def banner():
-    clear()
     dev = check_adb_device()
-    dev_badge = f"{C.GREEN}{dev}{C.RESET}" if dev else f"{C.RED}Disconnected{C.RESET}"
+    dev_badge = f"{C.GREEN}{C.BOLD}{dev}{C.RESET}" if dev else f"{C.RED}No Device Detected{C.RESET}"
     
-    print(f"""{C.CYAN}{C.BOLD}
-    _              _ _              _____             
-   / \\   ___  ___| | |_   _ ___   |__  /___ _ __ ___  
-  / _ \\ / __|/ _ \\ | | | | / __|    / // _ \\ '__/ _ \\ 
+    print(f"""
+{C.CYAN}{C.BOLD}    _              _ _             ______               
+   / \\   ___ ___| | |_   _ ___   |__  /___ _ __ ___  
+  / _ \\ / __/ _ \\ | | | | / __|    / // _ \\ '__/ _ \\ 
  / ___ \\ (__|  __/ | | |_| \\__ \\   / /|  __/ | | (_) |
 /_/   \\_\\___|\\___|_|_|\\__,_|___/  /____\\___|_|  \\___/ {C.RESET}
   {C.DIM}Modular Patcher & Installer{C.RESET}  {C.GRAY}|{C.RESET}  Device: {dev_badge}
@@ -151,6 +200,12 @@ def install_patch_ui(patch):
         status_fail(f"Patch folder '{patch['id']}' not found.")
         input(f"\n  {C.GRAY}Press Enter to return to menu...{C.RESET}")
         return
+
+    # Check for Groq API key configuration on all-in-one
+    if patch["id"] == "all-in-one":
+        user_key = get_groq_key()
+        if user_key:
+            apply_groq_key_to_all_in_one(user_key)
 
     # Step 2: Locate APK
     status_step("Locating compiled APK payload...")
@@ -197,55 +252,52 @@ def install_patch_ui(patch):
         return
 
     status_ok("Package installed successfully!")
-
-    # Step 5: Post-install verification
-    status_step("Verifying package registration on device...")
-    ok, ver_out, _ = run_quiet([ADB, "shell", "dumpsys", "package", PACKAGE])
-    if "versionName=" in ver_out:
-        for line in ver_out.splitlines():
-            if "versionName=" in line:
-                status_ok(f"Acellus client verified: {C.GREEN}{line.strip()}{C.RESET}")
-                break
-
-    print(f"\n  {C.GREEN}{C.BOLD}Finished! You can now launch Acellus on your phone.{C.RESET}")
+    
+    # Step 5: Post-install recommendations
+    print(f"\n  {C.GREEN}{C.BOLD}Launch Acellus on your phone to verify the patch.{C.RESET}")
     input(f"\n  {C.GRAY}Press Enter to return to menu...{C.RESET}")
-
-# ── Main Menu ─────────────────────────────────────────────────────────────────
 
 def main():
     while True:
+        clear()
         banner()
         print(f"\n  {C.WHITE}{C.BOLD}Available Patches:{C.RESET}\n")
 
-        for i, p in enumerate(PATCH_LIST, 1):
-            tag_color = C.CYAN
-            if p["tag"] == "RECOMMENDED":
-                tag_color = C.MAGENTA
-            elif p["tag"] == "MOD":
-                tag_color = C.GREEN
-
-            tag_badge = f"{tag_color}[{p['tag']}]{C.RESET}"
-            print(f"  {C.BOLD}{C.CYAN}[{i}]{C.RESET} {C.WHITE}{C.BOLD}{p['name']}{C.RESET}  {tag_badge}")
+        for idx, p in enumerate(PATCH_LIST, 1):
+            tag_color = C.GREEN if p["tag"] == "RECOMMENDED" else (C.CYAN if p["tag"] == "CORE" else C.YELLOW)
+            tag_str = f"{tag_color}[{p['tag']}]{C.RESET}"
+            num_str = f"{C.WHITE}{C.BOLD}[{idx}]{C.RESET}"
+            print(f"  {num_str} {p['name']:<24} {tag_str}")
             print(f"      {C.GRAY}{p['desc']}{C.RESET}\n")
 
-        print(f"  {C.BOLD}{C.RED}[0]{C.RESET} {C.GRAY}Exit{C.RESET}")
-        print(f"\n  {C.GRAY}───────────────────────────────────────────────────────────{C.RESET}")
+        print(f"  {C.WHITE}{C.BOLD}[6]{C.RESET} Configure Groq API Key {C.DIM}(for MC Auto-ESP){C.RESET}")
+        print(f"  {C.WHITE}{C.BOLD}[7]{C.RESET} Launch scrcpy Mirroring")
+        print(f"  {C.WHITE}{C.BOLD}[0]{C.RESET} Exit")
 
-        try:
-            choice = input(f"  {C.WHITE}Select option {C.DIM}[0-{len(PATCH_LIST)}]{C.RESET}: ").strip()
-        except (KeyboardInterrupt, EOFError):
-            print("\n")
-            break
+        choice = input(f"\n  {C.CYAN}Select an option [0-7]: {C.RESET}").strip()
 
         if choice == "0":
             clear()
-            break
-
-        if not choice.isdigit() or int(choice) < 1 or int(choice) > len(PATCH_LIST):
-            continue
-
-        selected_patch = PATCH_LIST[int(choice) - 1]
-        install_patch_ui(selected_patch)
+            sys.exit(0)
+        elif choice == "6":
+            clear()
+            banner()
+            get_groq_key()
+            input(f"\n  {C.GRAY}Key saved locally in config.json (gitignored). Press Enter...{C.RESET}")
+        elif choice == "7":
+            dev = check_adb_device()
+            if not dev:
+                print(f"\n  {C.RED}No device connected.{C.RESET}")
+                time.sleep(1.5)
+                continue
+            print(f"\n  {C.CYAN}[*] Starting scrcpy...{C.RESET}")
+            subprocess.Popen(["scrcpy"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            time.sleep(1)
+        elif choice.isdigit() and 1 <= int(choice) <= len(PATCH_LIST):
+            install_patch_ui(PATCH_LIST[int(choice) - 1])
+        else:
+            print(f"\n  {C.RED}Invalid selection.{C.RESET}")
+            time.sleep(1)
 
 if __name__ == "__main__":
     main()

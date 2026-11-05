@@ -1451,6 +1451,16 @@
     invoke-virtual {v0}, Landroid/net/Uri;->toString()Ljava/lang/String;
     move-result-object v0
     if-eqz v0, :cond_skip_clean
+    # Intercept groq-solve bridge
+    const-string v1, "groq-solve"
+    invoke-virtual {v0, v1}, Ljava/lang/String;->contains(Ljava/lang/CharSequence;)Z
+    move-result v1
+    if-eqz v1, :cond_skip_groq
+    invoke-static {v0}, Lcom/acellus/acellus/GroqSolver;->handle(Ljava/lang/String;)Landroid/webkit/WebResourceResponse;
+    move-result-object v0
+    return-object v0
+    :cond_skip_groq
+
     const-string v1, "index-"
     invoke-virtual {v0, v1}, Ljava/lang/String;->contains(Ljava/lang/CharSequence;)Z
     move-result v1

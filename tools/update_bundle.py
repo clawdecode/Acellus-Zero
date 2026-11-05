@@ -41,14 +41,12 @@ def update_and_rebuild():
     asset_path, base_str = fetch_latest_bundle()
     
     # 1. Neutralize Anti-DevTools Trap
-    # The IIFE injects Error/Image getter traps into console.log to detect DevTools and wipe DOM / redirect to acellus.com
     trap_header = '(function(){const t={X:124,K:117,D:134,U:125,H:135,d:127,n:123,u:113,T:120}'
     trap_bypass = '(function(){return;/* neutralized anti-devtools */const t={X:124,K:117,D:134,U:125,H:135,d:127,n:123,u:113,T:120}'
     if trap_header in base_str:
         base_str = base_str.replace(trap_header, trap_bypass, 1)
         print("[+] Neutralized anti-devtools IIFE trap.")
     else:
-        # Fallback regex for trap function
         trap_regex = r'\(function\(\)\{const t=\{X:124,K:117'
         if re.search(trap_regex, base_str):
             base_str = re.sub(trap_regex, r'(function(){return;/* neutralized */const t={X:124,K:117', base_str, count=1)
@@ -84,6 +82,10 @@ def update_and_rebuild():
     with open(mt_payload_path, "r", encoding="utf-8") as f:
         mt_payload = f.read()
 
+    aio_payload_path = os.path.join(PATCHES, "all-in-one", "payload.js")
+    with open(aio_payload_path, "r", encoding="utf-8") as f:
+        aio_payload = f.read()
+
     # 1. webview-debugging (Clean bundle + DevTools trap neutralized)
     with open(os.path.join(PATCHES, "webview-debugging", "acellus_decoded", "assets", "index-clean.js"), "w", encoding="utf-8") as f:
         f.write(base_str)
@@ -98,7 +100,7 @@ def update_and_rebuild():
 
     # 4. all-in-one
     with open(os.path.join(PATCHES, "all-in-one", "acellus_decoded", "assets", "index-clean.js"), "w", encoding="utf-8") as f:
-        f.write(patched_zo_str + "\n\n" + paste_payload + "\n\n" + mt_payload)
+        f.write(patched_zo_str + "\n\n" + aio_payload)
 
     print("[+] Updated index-clean.js across all patch definitions.")
 
