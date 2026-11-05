@@ -10,3 +10,6 @@ Thumbs.db
 config.json
 *.key
 
+# built JS bundles — may contain embedded API keys
+patches/**/assets/index-clean.js
+

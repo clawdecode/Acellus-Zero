@@ -205,10 +205,24 @@
   let lastQuestionKey = null;
   let isSolving = false;
 
+  const clearHighlight = () => {
+    document.querySelectorAll(".acellus-mc-highlight").forEach(el => {
+      el.classList.remove("acellus-mc-highlight");
+      el.style.border = "";
+      el.style.boxShadow = "";
+      el.style.background = "";
+      el.style.transition = "";
+    });
+    window.__mcNextAction = null;
+  };
+
   const findActiveProblem = () => {
     const container = document.querySelector('[data-current-work="true"]') || document.body;
-    const btns = Array.from(container.querySelectorAll('button[data-answer]'));
-    if (btns.length === 0) return null;
+    const allBtns = Array.from(container.querySelectorAll('button[data-answer]'));
+    if (allBtns.length === 0) return null;
+
+    const visibleBtns = allBtns.filter(b => b.offsetParent !== null && b.offsetWidth > 0 && b.offsetHeight > 0);
+    const btns = visibleBtns.length > 0 ? visibleBtns : allBtns;
 
     let p = null;
     const allEls = container.querySelectorAll('*');
@@ -226,80 +240,112 @@
       if (p) break;
     }
 
-    const qText = p?.questionText || container.innerText.slice(0, 400);
-    const refText = p?.referenceHtml ? p.referenceHtml.replace(/<[^>]+>/g, " ") : "";
-    const choices = btns.map(b => ({
-      letter: b.getAttribute("data-answer")?.toLowerCase(),
-      text: b.innerText.trim(),
-      btn: b
-    }));
+    const qText = (p?.questionText || container.innerText.slice(0, 400)).trim();
+    const refText = p?.referenceHtml ? p.referenceHtml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() : "";
 
-    const key = qText + "||" + choices.map(c => c.text).join("|");
+    const choiceMap = new Map();
+    btns.forEach(b => {
+      const letter = b.getAttribute("data-answer")?.toLowerCase();
+      if (!letter) return;
+      if (!choiceMap.has(letter)) {
+        choiceMap.set(letter, {
+          letter,
+          text: b.innerText.trim(),
+          btns: [b]
+        });
+      } else {
+        choiceMap.get(letter).btns.push(b);
+      }
+    });
+
+    const choices = Array.from(choiceMap.values());
+    if (choices.length === 0) return null;
+
+    const key = qText + "||" + choices.map(c => c.letter + ":" + c.text).join("|");
     return { qText, refText, choices, key };
   };
 
   const highlightAnswer = (letter, choices) => {
-    document.querySelectorAll(".acellus-mc-highlight").forEach(el => {
-      el.classList.remove("acellus-mc-highlight");
-      el.style.border = "";
-      el.style.boxShadow = "";
-      el.style.background = "";
-    });
-
+    clearHighlight();
     const target = choices.find(c => c.letter === letter.toLowerCase());
-    if (target && target.btn) {
-      target.btn.classList.add("acellus-mc-highlight");
-      target.btn.style.setProperty("border", "4px solid #00ff66", "important");
-      target.btn.style.setProperty("box-shadow", "0 0 25px #00ff66", "important");
-      target.btn.style.setProperty("background", "rgba(0, 255, 100, 0.25)", "important");
-      target.btn.style.setProperty("transition", "all 0.25s ease", "important");
+    if (target && target.btns) {
+      target.btns.forEach(btn => {
+        btn.classList.add("acellus-mc-highlight");
+        btn.style.setProperty("border", "4px solid #00ff66", "important");
+        btn.style.setProperty("box-shadow", "0 0 25px #00ff66", "important");
+        btn.style.setProperty("background", "rgba(0, 255, 100, 0.25)", "important");
+        btn.style.setProperty("transition", "all 0.25s ease", "important");
+      });
 
       window.__mcNextAction = () => {
-        target.btn.click();
+        const primary = target.btns.find(b => b.offsetParent !== null) || target.btns[0];
+        if (primary) primary.click();
       };
     }
+  };
+
+  const parseLetter = (content) => {
+    if (!content) return null;
+    const str = content.trim();
+
+    // 1. Single letter exact: "a", "B", "d."
+    const exact = str.match(/^([a-d])(?:\.|\b|$)/i);
+    if (exact) return exact[1].toLowerCase();
+
+    // 2. Pattern: "Answer: B", "Option (c)", "Choice: D", "**A**"
+    const pattern = str.match(/(?:answer|option|choice|correct)[:\s*]+(?:\()?([a-d])(?:\))?/i);
+    if (pattern) return pattern[1].toLowerCase();
+
+    // 3. Isolated letter token: (a), **b**, [c]
+    const isolated = str.match(/(?:\(|\*|\[|\b)([a-d])(?:\)|\*|\]|\.|\b)/i);
+    if (isolated) return isolated[1].toLowerCase();
+
+    return null;
   };
 
   const solve = async () => {
     if (isSolving) return;
     const prob = findActiveProblem();
-    if (!prob || prob.key === lastQuestionKey) return;
+
+    if (!prob) {
+      if (lastQuestionKey !== null) {
+        clearHighlight();
+        lastQuestionKey = null;
+      }
+      return;
+    }
+
+    if (prob.key !== lastQuestionKey) {
+      clearHighlight();
+      lastQuestionKey = prob.key;
+    } else {
+      if (document.querySelector(".acellus-mc-highlight")) return;
+    }
 
     isSolving = true;
-    lastQuestionKey = prob.key;
 
     try {
-      // 1. Passage Heuristic Scan (Instant 0ms local match)
-      if (prob.refText && prob.refText.length > 20) {
-        const refLower = prob.refText.toLowerCase();
-        for (const c of prob.choices) {
-          const tLower = c.text.toLowerCase();
-          if (tLower.length > 3 && refLower.includes(tLower)) {
-            highlightAnswer(c.letter, prob.choices);
-            isSolving = false;
-            return;
-          }
-        }
-      }
-
-      // 2. Query Native Groq Bridge via /groq-solve
       const apiKey = window.__GROQ_KEY || localStorage.getItem("acellus_groq_key") || "";
-      if (apiKey) {
-        const prompt = (prob.refText ? "Context: " + prob.refText + "\n\n" : "") +
-                       "Question: " + prob.qText + "\n\nChoices:\n" +
-                       prob.choices.map(c => c.letter + ") " + c.text).join("\n") +
-                       "\n\nOutput ONLY the single correct option letter (a, b, c, or d).";
+      if (!apiKey) return;
 
-        const res = await fetch("/groq-solve?k=" + encodeURIComponent(apiKey) + "&p=" + encodeURIComponent(prompt));
-        const data = await res.json();
-        const rawAns = data.choices?.[0]?.message?.content || "";
-        const match = rawAns.match(/[a-d]/i);
-        if (match) {
-          highlightAnswer(match[0].toLowerCase(), prob.choices);
-        }
+      const prompt = (prob.refText ? "Context / Reading Passage:\n" + prob.refText + "\n\n" : "") +
+                     "Question:\n" + prob.qText + "\n\n" +
+                     "Choices:\n" + prob.choices.map(c => c.letter.toUpperCase() + ") " + c.text).join("\n") + "\n\n" +
+                     "Which choice is correct? Output ONLY the single letter (A, B, C, or D).";
+
+      const res = await fetch("/groq-solve?k=" + encodeURIComponent(apiKey) + "&p=" + encodeURIComponent(prompt));
+      if (!res.ok) return;
+
+      const data = await res.json();
+      const rawAns = data.choices?.[0]?.message?.content || "";
+      const letter = parseLetter(rawAns);
+
+      if (letter) {
+        highlightAnswer(letter, prob.choices);
       }
     } catch(e) {
       console.warn("[Acellus-Zero] ESP solve error:", e);
+      lastQuestionKey = null;
     } finally {
       isSolving = false;
     }
