@@ -2,8 +2,8 @@
 """
 Acellus-Zero Web Asset Updater
 Automatically downloads the latest Acellus web bundle from signin.acellus.com,
-patches the internal developer environment gate (zo), injects payloads,
-rebuilds, and re-signs all patch APKs.
+neutralizes anti-devtools traps, patches the internal developer environment gate (zo),
+injects payloads, rebuilds, and re-signs all patch APKs.
 """
 
 import os
@@ -40,19 +40,41 @@ def fetch_latest_bundle():
 def update_and_rebuild():
     asset_path, base_str = fetch_latest_bundle()
     
-    # Bypass zo gate
+    # 1. Neutralize Anti-DevTools Trap
+    # The IIFE injects Error/Image getter traps into console.log to detect DevTools and wipe DOM / redirect to acellus.com
+    trap_header = '(function(){const t={X:124,K:117,D:134,U:125,H:135,d:127,n:123,u:113,T:120}'
+    trap_bypass = '(function(){return;/* neutralized anti-devtools */const t={X:124,K:117,D:134,U:125,H:135,d:127,n:123,u:113,T:120}'
+    if trap_header in base_str:
+        base_str = base_str.replace(trap_header, trap_bypass, 1)
+        print("[+] Neutralized anti-devtools IIFE trap.")
+    else:
+        # Fallback regex for trap function
+        trap_regex = r'\(function\(\)\{const t=\{X:124,K:117'
+        if re.search(trap_regex, base_str):
+            base_str = re.sub(trap_regex, r'(function(){return;/* neutralized */const t={X:124,K:117', base_str, count=1)
+            print("[+] Neutralized anti-devtools IIFE trap (via regex).")
+        else:
+            print("[!] Warning: Anti-devtools trap header not matched directly. Checking secondary r() hook...")
+
+    # Secondary defense: neutralize r() redirect function inside trap if ever reached
+    r_target = 'let r=()=>{const l=a;try{window.alert='
+    r_rep = 'let r=()=>{return;};let _r_unused=()=>{const l=a;try{window.alert='
+    if r_target in base_str:
+        base_str = base_str.replace(r_target, r_rep, 1)
+        print("[+] Neutralized secondary r() redirect hook.")
+
+    # 2. Bypass zo gate (Developer flags in localStorage)
     target_zo = 'const zo=()=>location.hostname==="localhost"||location.hostname.includes("testserv");'
     rep_zo = 'const zo=()=>true;/* bypassed gate */'
-    if target_zo not in base_str:
-        print("[!] Warning: Exact zo pattern not matched. Checking regex fallback...")
+    if target_zo in base_str:
+        patched_zo_str = base_str.replace(target_zo, rep_zo, 1)
+        print("[+] Patched zo() developer environment gate.")
+    else:
         zo_pattern = r'const zo=\(\)=>location\.hostname==="localhost"\|\|location\.hostname\.includes\("testserv"\);'
         if not re.search(zo_pattern, base_str):
             raise RuntimeError("zo gate pattern not found in downloaded bundle!")
         patched_zo_str = re.sub(zo_pattern, rep_zo, base_str, count=1)
-    else:
-        patched_zo_str = base_str.replace(target_zo, rep_zo, 1)
-    
-    print("[+] Patched zo() developer environment gate.")
+        print("[+] Patched zo() developer environment gate (via regex).")
 
     paste_payload_path = os.path.join(PATCHES, "allow-paste", "payload.js")
     with open(paste_payload_path, "r", encoding="utf-8") as f:
@@ -62,7 +84,7 @@ def update_and_rebuild():
     with open(mt_payload_path, "r", encoding="utf-8") as f:
         mt_payload = f.read()
 
-    # 1. webview-debugging
+    # 1. webview-debugging (Clean bundle + DevTools trap neutralized)
     with open(os.path.join(PATCHES, "webview-debugging", "acellus_decoded", "assets", "index-clean.js"), "w", encoding="utf-8") as f:
         f.write(base_str)
 
@@ -94,7 +116,7 @@ def update_and_rebuild():
         subprocess.run(["java", "-jar", SIGNER, "-a", raw_apk, "-o", p_dir], check=True, stdout=subprocess.DEVNULL)
         print(f"[+] {t} ready.")
 
-    print("\n[+] Success! All APKs updated to latest Acellus release.")
+    print("\n[+] Success! All APKs updated and signed.")
 
 if __name__ == "__main__":
     update_and_rebuild()
