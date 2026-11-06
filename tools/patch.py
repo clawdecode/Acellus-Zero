@@ -116,13 +116,25 @@ PATCH_LIST = [
         "id":   "mc-esp",
         "name": "MC Auto-ESP Solver",
         "tag":  "MOD",
-        "desc": "Multiple choice auto-answer via Groq AI — highlights correct option.",
+        "desc": "Groq AI highlights correct MC answer. Space to click it. Requires Groq key.",
+    },
+    {
+        "id":   "text-input-esp",
+        "name": "Text Input ESP",
+        "tag":  "MOD",
+        "desc": "Groq AI shows answer above fill-in boxes (yellow overlay). Requires Groq key.",
+    },
+    {
+        "id":   "video-skip",
+        "name": "Video Skip",
+        "tag":  "MOD",
+        "desc": "Floating '>> Skip' button appears on video steps — skips instantly.",
     },
     {
         "id":   "all-in-one",
         "name": "All-In-One Bundle",
         "tag":  "FULL",
-        "desc": "Full suite: MC Auto-ESP + Math Tiles + Paste + DevTools + Mirror.",
+        "desc": "Full suite: MC + Text Input + Math Tiles + Paste + Video Skip + Mirror.",
     },
 ]
 
@@ -347,7 +359,7 @@ def groq_key_screen():
     _vpad(8)
     _top('Groq API Key')
     _blank()
-    _irow('Used by MC Auto-ESP to answer multiple choice questions.', _GR)
+    _irow('Used by MC Auto-ESP and Text Input ESP to answer questions.', _GR)
     _irow(f'Current key: {_YL}{hint}{_R}', '')
     _irow('Get a free key from console.groq.com/keys', _GR)
     _blank()
@@ -407,7 +419,7 @@ def install_patch(patch, groq_key=''):
         _getch()
         return False
 
-    if patch["id"] in ("all-in-one", "mc-esp") and groq_key:
+    if patch["id"] in ("all-in-one", "mc-esp", "text-input-esp") and groq_key:
         _step('Embedding Groq API key…')
         apply_groq_key(patch["id"], groq_key)
         _ok('API key embedded.')
@@ -464,7 +476,7 @@ def install_patch(patch, groq_key=''):
 # ── Multi-patch install flow ──────────────────────────────────────────────────
 def run_multi_install(selected_indices):
     groq_key = load_groq_key()
-    needs_groq = any(PATCH_LIST[i]["id"] in ("all-in-one", "mc-esp") for i in selected_indices)
+    needs_groq = any(PATCH_LIST[i]["id"] in ("all-in-one", "mc-esp", "text-input-esp") for i in selected_indices)
 
     if needs_groq:
         saved = load_groq_key()
@@ -472,9 +484,9 @@ def run_multi_install(selected_indices):
         _clear()
         banner()
         _vpad(8)
-        _top('Groq API Key  —  MC Auto-ESP selected')
+        _top('Groq API Key  —  AI ESP selected')
         _blank()
-        _irow('Enter a Groq key to enable MC Auto-ESP, or leave blank.', _GR)
+        _irow('Enter a Groq key to enable MC / Text Input ESP, or leave blank.', _GR)
         _irow(f'Current: {_YL}{hint}{_R}', '')
         _blank()
         _bot()
@@ -487,7 +499,7 @@ def run_multi_install(selected_indices):
     results = {}
     for idx in selected_indices:
         patch = PATCH_LIST[idx]
-        ok    = install_patch(patch, groq_key=groq_key if patch["id"] in ("all-in-one", "mc-esp") else '')
+        ok    = install_patch(patch, groq_key=groq_key if patch["id"] in ("all-in-one", "mc-esp", "text-input-esp") else '')
         results[patch["name"]] = ok
 
     # Summary screen
