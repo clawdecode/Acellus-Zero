@@ -75,7 +75,6 @@ var sT;(sT=window.nativePrint)!=null||(window.nativePrint=void 0);//! We need to
 var aT;(aT=window.requestAppStoreReview)!=null||(window.requestAppStoreReview=void 0);//! We need to define this here to prevent errors when we are not in the native app.
 var nT;(nT=window.IS_STORYBOOK)!=null||(window.IS_STORYBOOK=!1);const Ok=new rD({defaultOptions:{queries:{retry:1}}}),bo1=zZ({routeTree:vo1,context:{queryClient:Ok,interface:X2.ACELLUS},defaultPreload:TR()?"render":"intent",defaultPreloadStaleTime:0,notFoundMode:"fuzzy"});XZ.createRoot(document.getElementById("root")).render(w.jsx(c.StrictMode,{children:w.jsx(uD,{client:Ok,children:w.jsx(YZ,{router:bo1})})}));document.documentElement.classList.remove("loading");var rT;document.documentElement.classList.add((rT=to.browser)!=null?rT:"unknown");var iT,oT,cT,lT;((iT=to.browser)!=null&&iT.includes("ios")||(oT=to.browser)!=null&&oT.includes("macos")||((cT=window.app)==null?void 0:cT.os)==="macOS"||((lT=window.app)==null?void 0:lT.os)==="iOS")&&document.documentElement.classList.add("safari");window.app&&(window.logout=qx);export{zo as $,Eo as A,JT as B,Q1 as C,R8 as D,W01 as E,Vi as F,GF as G,Mi as H,vC as I,ec1 as J,u3 as K,Wq as L,o as M,vx as N,XT as O,$3 as P,S6 as Q,VF as R,aP as S,cP as T,WU as U,qf as V,k2 as W,FW as X,Zo as Y,EB as Z,J as _,wo1 as __vite_legacy_guard,q2 as a,ox as a$,$s as a0,N7 as a1,eS as a2,V01 as a3,e3 as a4,y_ as a5,nP as a6,Tj as a7,lm as a8,Na as a9,B9 as aA,ei as aB,jc1 as aC,Pc1 as aD,Gx as aE,Ux as aF,Nc1 as aG,Nx as aH,Ac1 as aI,Px as aJ,Lc1 as aK,Oc1 as aL,Jr as aM,Rc1 as aN,Ox as aO,kc1 as aP,aU as aQ,_B as aR,tU as aS,wx as aT,Ix as aU,mm as aV,xx as aW,pm as aX,_x as aY,gU as aZ,lx as a_,Uo as aa,$2 as ab,R2 as ac,h4 as ad,o0 as ae,aa as af,Wx as ag,$x as ah,Ts as ai,Uc1 as aj,Nh as ak,Vx as al,Ph as am,X6 as an,ti as ao,jx as ap,Hx as aq,zx as ar,e7 as as,Y1 as at,s0 as au,$c1 as av,Fc1 as aw,Mc1 as ax,Bc1 as ay,Dc1 as az,Oo1 as b,No as b$,cx as b0,yc1 as b1,bc1 as b2,Rx as b3,ym as b4,vm as b5,gm as b6,Sx as b7,pU as b8,nj as b9,WC as bA,t$ as bB,tP as bC,sQ as bD,r7 as bE,Qx as bF,Ze as bG,nk as bH,Q8 as bI,Wa as bJ,J2 as bK,ll1 as bL,lc as bM,uh as bN,zq as bO,Io1 as bP,P0 as bQ,Vm as bR,Fp as bS,G8 as bT,jj as bU,tK as bV,s_ as bW,eI as bX,Mo1 as bY,QR as bZ,jO as b_,Zh as ba,st as bb,De as bc,c_ as bd,si as be,p6 as bf,p4 as bg,Cc1 as bh,xc1 as bi,Ba as bj,fE as bk,Z7 as bl,t4 as bm,Qm as bn,X01 as bo,Ma as bp,E0 as bq,Nj as br,qe as bs,B8 as bt,t_ as bu,T$ as bv,D$ as bw,Mm as bx,Yf as by,UO as bz,mb as c,h5 as c$,JO as c0,No1 as c1,TC as c2,I$ as c3,zc1 as c4,Wf as c5,_m as c6,Ao1 as c7,O4 as c8,Nq as c9,Qd as cA,_o1 as cB,Ue as cC,CV as cD,Do1 as cE,xO as cF,Ye as cG,zu as cH,Ps as cI,tD as cJ,U3 as cK,L0 as cL,VL as cM,So1 as cN,w6 as cO,g6 as cP,hI as cQ,Sl1 as cR,Gi as cS,yI as cT,m_ as cU,Tl1 as cV,A9 as cW,sV as cX,e6 as cY,w5 as cZ,Kr as c_,La as ca,$a as cb,FG as cc,EC as cd,zG as ce,eP as cf,K91 as cg,LC as ch,xm as ci,s8 as cj,Hb as ck,wB as cl,Ao as cm,U$ as cn,W8 as co,bE as cp,FN as cq,Wm as cr,nC as cs,cW as ct,k3 as cu,m81 as cv,WF as cw,QF as cx,YC as cy,Vo as cz,M51 as d,Zm as d$,kO as d0,To as d1,oW as d2,EV as d3,cV as d4,iV as d5,nt as d6,z8 as d7,Jo as d8,GW as d9,dS as dA,Y8 as dB,Tm as dC,bk as dD,Xj as dE,AG as dF,RG as dG,F1 as dH,aI as dI,vk as dJ,Gc1 as dK,qR as dL,$h as dM,ks as dN,ec as dO,LT as dP,wI as dQ,C91 as dR,Xl1 as dS,Y4 as dT,a8 as dU,Xf as dV,l8 as dW,HG as dX,lW as dY,dT as dZ,LG as d_,H8 as da,HW as db,$W as dc,G41 as dd,ze as de,de as df,jR as dg,T7 as dh,cc as di,q41 as dj,Lp as dk,i51 as dl,z41 as dm,t51 as dn,r51 as dp,VR as dq,Rf as dr,za as ds,Mp as dt,K41 as du,UR as dv,kf as dw,J41 as dx,W41 as dy,Q41 as dz,ek as e,fc1 as e$,Ar as e0,GG as e1,Hc1 as e2,Fa as e3,S0 as e4,tt as e5,pq as e6,mE as e7,Rr as e8,u8 as e9,rs as eA,hx as eB,l6 as eC,Ic1 as eD,Jo1 as eE,WB as eF,_C as eG,AB as eH,gc1 as eI,rc1 as eJ,jU as eK,uc1 as eL,$U as eM,nc1 as eN,ac1 as eO,tc1 as eP,sc1 as eQ,HV as eR,vc1 as eS,uS as eT,DW as eU,wc1 as eV,Sc1 as eW,Tc1 as eX,VU as eY,kx as eZ,mc1 as e_,Kl1 as ea,gk as eb,us as ec,Xm as ed,OS as ee,gE as ef,l_ as eg,q8 as eh,HN as ei,jo as ej,b6 as ek,Vl1 as el,S91 as em,yE as en,O41 as eo,qV as ep,yV as eq,Pm as er,To1 as es,Ke as et,YT as eu,aN as ev,Ql1 as ew,Bp as ex,iP as ey,rP as ez,i0 as f,rd1 as f$,Ec1 as f0,zU as f1,hc1 as f2,pc1 as f3,Gb as f4,BU as f5,GU as f6,BG as f7,Om as f8,bm as f9,X2 as fA,hW as fB,qx as fC,$8 as fD,kG as fE,zl1 as fF,Wl1 as fG,WV as fH,LV as fI,o8 as fJ,N51 as fK,Fo as fL,R51 as fM,kV as fN,v91 as fO,rk as fP,PS as fQ,sl1 as fR,VB as fS,hE as fT,OQ as fU,Xh as fV,aS as fW,Yc1 as fX,dx as fY,ux as fZ,ya as f_,tk as fa,Em as fb,Dq as fc,lI as fd,ic1 as fe,dc1 as ff,lc1 as fg,cc1 as fh,oc1 as fi,Uf as fj,dD as fk,RT as fl,Um as fm,O61 as fn,f4 as fo,Iq as fp,UW as fq,Am as fr,j$ as fs,RO as ft,ZL as fu,Kq as fv,bC as fw,Ro1 as fx,yG as fy,mq as fz,jf as g,ul1 as g$,Q91 as g0,y4 as g1,KV as g2,A0 as g3,S$ as g4,jN as g5,tl1 as g6,rS as g7,T_ as g8,km as g9,sd1 as gA,oV as gB,nd1 as gC,ad1 as gD,Jl1 as gE,ed1 as gF,_o as gG,W91 as gH,Io as gI,Df as gJ,Zf as gK,Fe1 as gL,je1 as gM,Be1 as gN,id1 as gO,$e1 as gP,He1 as gQ,od1 as gR,hr as gS,jo1 as gT,f8 as gU,qm as gV,Qe as gW,yB as gX,JU as gY,Vc1 as gZ,Yx as g_,VG as ga,bV as gb,c71 as gc,c41 as gd,bo as ge,Z5 as gf,ws as gg,e_ as gh,i41 as gi,$o1 as gj,Lo1 as gk,vV as gl,al1 as gm,TR as gn,Ye1 as go,K4 as gp,W$ as gq,N8 as gr,Xe1 as gs,Qc1 as gt,Fq as gu,RC as gv,Zo1 as gw,_7 as gx,FS as gy,td1 as gz,sm as h,cm as h$,t7 as h0,i_ as h1,Jx as h2,Uh as h3,Po1 as h4,O51 as h5,zW as h6,zB as h7,v_ as h8,Hh as h9,Dh as hA,Lh as hB,Qo as hC,rl1 as hD,il1 as hE,ol1 as hF,$e as hG,Hi as hH,Go1 as hI,zm as hJ,Lx as hK,Dx as hL,xT as hM,ml1 as hN,pl1 as hO,vl1 as hP,gl1 as hQ,fl1 as hR,g$ as hS,yl1 as hT,hl1 as hU,bl1 as hV,sB as hW,aB as hX,nl1 as hY,XC as hZ,rm as h_,p_ as ha,Cl1 as hb,qq as hc,DQ as hd,PW as he,RE as hf,ZQ as hg,P41 as hh,PR as hi,N41 as hj,cI as hk,_c1 as hl,Kc1 as hm,rI as hn,Ko1 as ho,et as hp,cl1 as hq,x51 as hr,vY as hs,A51 as ht,TV as hu,kF as hv,L51 as hw,SV as hx,Y_ as hy,v6 as hz,E3 as i,Nm as i$,dl1 as i0,SH as i1,kp as i2,Ml1 as i3,SI as i4,S41 as i5,L41 as i6,m41 as i7,kl1 as i8,k41 as i9,VH as iA,qh as iB,Jc1 as iC,sG as iD,Gl1 as iE,Yb as iF,ej as iG,Q0 as iH,Uo1 as iI,MF as iJ,Bo1 as iK,Fo1 as iL,z1 as iM,Cq as iN,i1 as iO,wl1 as iP,mG as iQ,El1 as iR,zi as iS,iW as iT,Dl1 as iU,$l1 as iV,AR as iW,IR as iX,Af as iY,gi as iZ,RR as i_,Ll1 as ia,ql1 as ib,Tq as ic,KG as id,g_ as ie,Yl1 as ig,_H as ih,U9 as ii,Wo1 as ij,om as ik,Bo as il,Ss as im,YF as io,qF as ip,JC as iq,QC as ir,am as is,qC as it,Ho1 as iu,BH as iv,Pa as iw,Xc1 as ix,KC as iy,gq as iz,w as j,lj as j$,Nl1 as j0,jl1 as j1,Ol1 as j2,Pl1 as j3,Ul1 as j4,Fl1 as j5,Bl1 as j6,Rp as j7,Il1 as j8,OR as j9,pt1 as jA,bt1 as jB,St1 as jC,_t1 as jD,Rt1 as jE,Lt1 as jF,TB as jG,BO as jH,Kx as jI,Fh as jJ,Oh as jK,ra as jL,Zx as jM,Fx as jN,Bx as jO,Yo1 as jP,Zc1 as jQ,MV as jR,P1 as jS,wj as jT,Ej as jU,bj as jV,gj as jW,pj as jX,fj as jY,hj as jZ,dj as j_,M41 as ja,o7 as jb,Rl1 as jc,Zl1 as jd,Z41 as je,Al1 as jf,wo as jg,So as jh,dm as ji,e41 as jj,D41 as jk,Y0 as jl,i61 as jm,XR as jn,D51 as jo,tx as jp,im as jq,Ke1 as jr,dc as js,yZ as jt,Co1 as ju,cd1 as jv,tt1 as jw,rt1 as jx,ct1 as jy,ht1 as jz,n0 as k,cj as k0,r41 as k1,xo1 as k2,qo1 as k3,ix as k4,Vo1 as k5,zo1 as k6,Qo1 as k7,el1 as k8,C51 as k9,$51 as ka,tm as kb,Fe as kc,Zu as kd,tu as ke,B$ as kf,Wc1 as kg,e4 as l,Ko as m,k1 as n,Mh as o,n41 as p,Oa as q,c as r,$N as s,v4 as t,T0 as u,O3 as v,j2 as w,Zi as x,X1 as y,qc1 as z};
 
-
 // Acellus-Zero: All-In-One Mod Payload
 // Includes:
 // 1. Unrestricted Clipboard, Context Menu & Chunked Typer
@@ -647,7 +646,7 @@ var nT;(nT=window.IS_STORYBOOK)!=null||(window.IS_STORYBOOK=!1);const Ok=new rD(
       }
     } catch(e) {
       console.warn("[Acellus-Zero] Text input solve error:", e);
-      lastKey = null;
+      setTimeout(() => { if (lastKey === prob.key) lastKey = null; }, 5000);
     } finally {
       isSolving = false;
     }
@@ -794,4 +793,239 @@ var nT;(nT=window.IS_STORYBOOK)!=null||(window.IS_STORYBOOK=!1);const Ok=new rD(
   setInterval(updateButtonVisibility, 500);
 
 })();
+// ==============================================================================
+// 3. Multiple Choice Instant AI & Passage Auto-ESP
+// ==============================================================================
+(function() {
+  if (window.__acellusMcSolverInjected) return;
+  window.__acellusMcSolverInjected = true;
+
+  console.log("%c[Acellus-Zero] Multiple Choice Auto-ESP Activated", "color: #00ff66; font-weight: bold; font-size: 13px;");
+
+  let lastQuestionKey = null;
+  let isSolving = false;
+
+  const cleanText = (html) => {
+    if (!html) return "";
+    return html
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/p>/gi, "\n")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&#039;|&apos;/g, "'")
+      .replace(/&quot;/g, '"')
+      .replace(/\s+/g, " ")
+      .trim();
+  };
+
+  const clearHighlight = () => {
+    document.querySelectorAll(".acellus-mc-highlight").forEach(el => {
+      el.classList.remove("acellus-mc-highlight");
+      el.style.border = "";
+      el.style.boxShadow = "";
+      el.style.background = "";
+      el.style.transition = "";
+    });
+    window.__mcNextAction = null;
+  };
+
+  const findActiveProblem = () => {
+    const container = document.querySelector('[data-current-work="true"]') || document.body;
+    const allBtns = Array.from(container.querySelectorAll('button[data-answer]'));
+    if (allBtns.length === 0) return null;
+
+    const visibleBtns = allBtns.filter(b => b.offsetParent !== null && b.offsetWidth > 0 && b.offsetHeight > 0);
+    const btns = visibleBtns.length > 0 ? visibleBtns : allBtns;
+
+    // 1. Walk React Fiber to find problem object 'p'
+    let p = null;
+    const allEls = [container, ...container.querySelectorAll('*')];
+    for (const el of allEls) {
+      const k = el && Object.keys(el).find(x => x.startsWith('__reactFiber$'));
+      if (!k) continue;
+      let curr = el[k];
+      while (curr) {
+        if (curr.memoizedProps?.work?.p) {
+          p = curr.memoizedProps.work.p;
+          break;
+        }
+        let dep = curr.dependencies?.firstContext;
+        while (dep) {
+          if (dep.memoizedValue?.work?.p) {
+            p = dep.memoizedValue.work.p;
+            break;
+          }
+          dep = dep.next;
+        }
+        if (p) break;
+        curr = curr.return;
+      }
+      if (p) break;
+    }
+
+    // 2. Extract Question Text: prefer questionHtml / questionText from Fiber
+    let qText = "";
+    if (p) {
+      qText = cleanText(p.questionHtml) || cleanText(p.questionText) || cleanText(p.questionImageAlt) || "";
+    }
+    if (!qText) {
+      // Fallback: extract visible question area text, excluding button labels & headers
+      const clone = container.cloneNode(true);
+      clone.querySelectorAll('button[data-answer], header, footer, [class*="TabHeader"]').forEach(e => e.remove());
+      const rawText = clone.innerText || "";
+      qText = rawText.replace(/Choose the correct answer\.?/i, "").replace(/\bSkip\b/i, "").trim().slice(0, 500);
+    }
+    if (!qText) return null;
+
+    const refText = p?.referenceHtml ? cleanText(p.referenceHtml) : "";
+
+    // 3. Extract Choices: Map each button letter to clean option text
+    const choiceMap = new Map();
+    btns.forEach(b => {
+      const letter = b.getAttribute("data-answer")?.toLowerCase();
+      if (!letter) return;
+
+      if (!choiceMap.has(letter)) {
+        const upper = letter.toUpperCase();
+        let optText = "";
+        if (p) {
+          optText = cleanText(p["option" + upper + "Text"]) ||
+                    cleanText(p["option" + upper + "Html"]) ||
+                    cleanText(p["option" + upper + "ImageAlt"]) || "";
+        }
+        if (!optText) {
+          optText = b.innerText.trim();
+        }
+
+        choiceMap.set(letter, {
+          letter,
+          text: optText,
+          btns: [b]
+        });
+      } else {
+        choiceMap.get(letter).btns.push(b);
+      }
+    });
+
+    const choices = Array.from(choiceMap.values());
+    if (choices.length === 0) return null;
+
+    // Do not attempt if all choices are blank (e.g. unlabeled images)
+    if (choices.every(c => !c.text)) return null;
+
+    const key = qText + "||" + choices.map(c => c.letter + ":" + c.text).join("|");
+    return { qText, refText, choices, key };
+  };
+
+  const highlightAnswer = (letter, choices) => {
+    clearHighlight();
+    const target = choices.find(c => c.letter === letter.toLowerCase());
+    if (target && target.btns) {
+      target.btns.forEach(btn => {
+        btn.classList.add("acellus-mc-highlight");
+        btn.style.setProperty("border", "4px solid #00ff66", "important");
+        btn.style.setProperty("box-shadow", "0 0 25px #00ff66", "important");
+        btn.style.setProperty("background", "rgba(0, 255, 100, 0.25)", "important");
+        btn.style.setProperty("transition", "all 0.25s ease", "important");
+      });
+
+      window.__mcNextAction = () => {
+        const primary = target.btns.find(b => b.offsetParent !== null) || target.btns[0];
+        if (primary) primary.click();
+      };
+    }
+  };
+
+  const parseLetter = (content) => {
+    if (!content) return null;
+    const str = content.trim();
+
+    // 1. Single letter exact: "a", "B", "d."
+    const exact = str.match(/^([a-d])(?:\.|\b|$)/i);
+    if (exact) return exact[1].toLowerCase();
+
+    // 2. Pattern: "Answer: B", "Option (c)", "Choice: D", "**A**"
+    const pattern = str.match(/(?:answer|option|choice|correct)[:\s*]+(?:\()?([a-d])(?:\))?/i);
+    if (pattern) return pattern[1].toLowerCase();
+
+    // 3. Isolated letter token: (a), **b**, [c]
+    const isolated = str.match(/(?:\(|\*|\[|\b)([a-d])(?:\)|\*|\]|\.|\b)/i);
+    if (isolated) return isolated[1].toLowerCase();
+
+    return null;
+  };
+
+  const solve = async () => {
+    if (isSolving) return;
+    const prob = findActiveProblem();
+
+    if (!prob) {
+      if (lastQuestionKey !== null) {
+        clearHighlight();
+        lastQuestionKey = null;
+      }
+      return;
+    }
+
+    if (prob.key !== lastQuestionKey) {
+      clearHighlight();
+      lastQuestionKey = prob.key;
+    } else {
+      if (document.querySelector(".acellus-mc-highlight")) return;
+    }
+
+    isSolving = true;
+
+    try {
+      const apiKey = window.__GROQ_KEY || localStorage.getItem("acellus_groq_key") || "";
+      if (!apiKey) return;
+
+      const prompt = (prob.refText ? "Context / Reading Passage:\n" + prob.refText + "\n\n" : "") +
+                     "Question:\n" + prob.qText + "\n\n" +
+                     "Choices:\n" + prob.choices.map(c => c.letter.toUpperCase() + ") " + (c.text || "[Image]")).join("\n") + "\n\n" +
+                     "Which choice is correct? Output ONLY the single letter (A, B, C, or D).";
+
+      const res = await fetch("/groq-solve?k=" + encodeURIComponent(apiKey) + "&p=" + encodeURIComponent(prompt));
+      if (!res.ok) {
+        setTimeout(() => { if (lastQuestionKey === prob.key) lastQuestionKey = null; }, 5000);
+        return;
+      }
+
+      const data = await res.json();
+      const rawAns = data.choices?.[0]?.message?.content || "";
+      const letter = parseLetter(rawAns);
+
+      if (letter) {
+        highlightAnswer(letter, prob.choices);
+      }
+    } catch(e) {
+      console.warn("[Acellus-Zero] ESP solve error:", e);
+      setTimeout(() => { if (lastQuestionKey === prob.key) lastQuestionKey = null; }, 5000);
+    } finally {
+      isSolving = false;
+    }
+  };
+
+  setInterval(solve, 350);
+
+  // Global Spacebar Keybind to Auto-Answer
+  window.addEventListener("keydown", (e) => {
+    if (e.code === "Space") {
+      const activeTag = document.activeElement?.tagName;
+      if (activeTag === "INPUT" || activeTag === "TEXTAREA" || document.activeElement?.isContentEditable) return;
+
+      if (window.__mtNextAction) {
+        e.preventDefault();
+        window.__mtNextAction();
+      } else if (window.__mcNextAction) {
+        e.preventDefault();
+        window.__mcNextAction();
+      }
+    }
+  });
+})();
+
 
