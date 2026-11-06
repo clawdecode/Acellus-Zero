@@ -61,18 +61,16 @@ def update_and_rebuild():
         base_str = base_str.replace(r_target, r_rep, 1)
         print("[+] Neutralized secondary r() redirect hook.")
 
-    # 2. Bypass zo gate (Developer flags in localStorage)
-    target_zo = 'const zo=()=>location.hostname==="localhost"||location.hostname.includes("testserv");'
-    rep_zo = 'const zo=()=>true;/* bypassed gate */'
-    if target_zo in base_str:
-        patched_zo_str = base_str.replace(target_zo, rep_zo, 1)
-        print("[+] Patched zo() developer environment gate.")
-    else:
-        zo_pattern = r'const zo=\(\)=>location\.hostname==="localhost"\|\|location\.hostname\.includes\("testserv"\);'
-        if not re.search(zo_pattern, base_str):
-            raise RuntimeError("zo gate pattern not found in downloaded bundle!")
-        patched_zo_str = re.sub(zo_pattern, rep_zo, base_str, count=1)
-        print("[+] Patched zo() developer environment gate (via regex).")
+    # 2. Bypass dev environment gate (Developer flags in localStorage, e.g. zo, Wo, etc.)
+    dev_gate_pattern = r'const [a-zA-Z0-9_$]+=\(\)=>location\.hostname==="localhost"\|\|location\.hostname\.includes\("testserv"\);'
+    match = re.search(dev_gate_pattern, base_str)
+    if not match:
+        raise RuntimeError("Dev environment gate pattern not found in downloaded bundle!")
+    matched_text = match.group(0)
+    func_name = matched_text.split('=')[0].replace('const ', '').strip()
+    rep_dev_gate = f'const {func_name}=()=>true;/* bypassed gate */'
+    patched_zo_str = base_str.replace(matched_text, rep_dev_gate, 1)
+    print(f"[+] Patched {func_name}() developer environment gate.")
 
     paste_payload_path = os.path.join(PATCHES, "allow-paste", "payload.js")
     with open(paste_payload_path, "r", encoding="utf-8") as f:
