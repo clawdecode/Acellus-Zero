@@ -135,7 +135,7 @@
 
   const clearHighlight = () => {
     document.querySelectorAll(".acellus-mc-badge").forEach(el => el.remove());
-    document.querySelectorAll(".acellus-mc-highlight").forEach(el => {
+    document.querySelectorAll(".acellus-mc-highlight, button[data-answer]").forEach(el => {
       el.classList.remove("acellus-mc-highlight");
       el.style.border = "";
       el.style.boxShadow = "";
@@ -227,7 +227,8 @@
     if (choices.length === 0) return null;
     if (choices.every(c => !c.text)) return null;
 
-    const key = qText + "||" + choices.map(c => c.letter + ":" + c.text).join("|");
+    const probId = p?.problemStepID ? ("ID_" + p.problemStepID) : "";
+    const key = (probId || qText) + "||" + choices.map(c => c.letter + ":" + c.text).join("|");
     return { qText, refText, choices, key };
   };
 
@@ -238,7 +239,7 @@
       const isLogic = info?.source === "Logic";
       const borderColor = isLogic ? "#00e5ff" : "#00ff66";
       const glowColor = isLogic ? "rgba(0, 229, 255, 0.3)" : "rgba(0, 255, 100, 0.25)";
-      const accuracy = info?.accuracy || (isLogic ? 100 : 95);
+      const accuracy = info?.accuracy || (isLogic ? 100 : 98);
       const badgeText = `${isLogic ? "LOGIC" : "AI"} ${accuracy}%`;
 
       target.btns.forEach(btn => {
@@ -282,36 +283,53 @@
     }
   };
 
-  const parseLetter = (content) => {
+  const parseLetterAndConfidence = (content) => {
     if (!content) return null;
     const str = content.trim();
 
-    // 1. Single letter exact: "a", "B", "d."
-    const exact = str.match(/^([a-d])(?:\.||$)/i);
-    if (exact) return exact[1].toLowerCase();
+    // 1. Look for explicit Answer line: e.g. "Answer: B [98%]" or "Answer: B 95%" or "Answer: B"
+    const mAns = str.match(/Answer:\s*([a-d])(?:\s*\[?\(?(\d{1,3})%?\]?\)?)?/i);
+    if (mAns) {
+      const acc = mAns[2] ? parseInt(mAns[2], 10) : 98;
+      return { letter: mAns[1].toLowerCase(), accuracy: Math.min(acc, 100) };
+    }
 
-    // 2. Pattern: "Answer: B", "Option (c)", "Choice: D", "**A**"
-    const pattern = str.match(/(?:answer|option|choice|correct)[:\s*]+(?:\()?([a-d])(?:\))?/i);
-    if (pattern) return pattern[1].toLowerCase();
+    // 2. Look for Choice/Option/Correct: B
+    const mChoice = str.match(/(?:choice|option|correct)[:\s*]+(?:\()?([a-d])(?:\b|\))/i);
+    if (mChoice) {
+      const mAcc = str.match(/(\d{1,3})%/);
+      const acc = mAcc ? parseInt(mAcc[1], 10) : 95;
+      return { letter: mChoice[1].toLowerCase(), accuracy: Math.min(acc, 100) };
+    }
 
-    // 3. Isolated letter token: (a), **b**, [c]
-    const isolated = str.match(/(?:\(|\*|\[|)([a-d])(?:\)|\*|\]|\.|)/i);
-    if (isolated) return isolated[1].toLowerCase();
+    // 3. Isolated letter on its own line: e.g. "\nB\n" or "^B$"
+    const mLine = str.match(/^[ \t]*([a-d])[ \t]*$/im);
+    if (mLine) {
+      const mAcc = str.match(/(\d{1,3})%/);
+      const acc = mAcc ? parseInt(mAcc[1], 10) : 92;
+      return { letter: mLine[1].toLowerCase(), accuracy: Math.min(acc, 100) };
+    }
+
+    // 4. Bracketed/Parenthesized letter: (B) or [B]
+    const mBracket = str.match(/[(\[]([a-d])[)\]]/i);
+    if (mBracket) {
+      const mAcc = str.match(/(\d{1,3})%/);
+      const acc = mAcc ? parseInt(mAcc[1], 10) : 90;
+      return { letter: mBracket[1].toLowerCase(), accuracy: Math.min(acc, 100) };
+    }
+
+    // 5. Letter in final line/tail of output
+    const lines = str.split("\n").filter(Boolean);
+    if (lines.length > 0) {
+      const mTail = lines[lines.length - 1].match(/\b([a-d])\b/i);
+      if (mTail) {
+        const mAcc = str.match(/(\d{1,3})%/);
+        const acc = mAcc ? parseInt(mAcc[1], 10) : 88;
+        return { letter: mTail[1].toLowerCase(), accuracy: Math.min(acc, 100) };
+      }
+    }
 
     return null;
-  };
-
-  const parseLetterAndConfidence = (content) => {
-    if (!content) return null;
-    const m = content.match(/Answer:\s*([a-d])(?:\s*\[?\(?(\d{1,3})%?\]?\)?)?/i);
-    if (m) {
-      const acc = m[2] ? parseInt(m[2], 10) : 95;
-      return { letter: m[1].toLowerCase(), accuracy: Math.min(acc, 100) };
-    }
-    const m2 = content.match(/\b([a-d])\b[^\n]*?(\d{1,3})%/i);
-    if (m2) return { letter: m2[1].toLowerCase(), accuracy: parseInt(m2[2], 10) };
-    const letter = parseLetter(content);
-    return letter ? { letter, accuracy: 88 } : null;
   };
 
   const solve = async () => {
@@ -329,7 +347,7 @@
     if (answeredQuestions.has(prob.key)) return;
 
     if (prob.key !== lastQuestionKey) {
-      if (answeredQuestions.size > 100) answeredQuestions.clear();
+      if (answeredQuestions.size > 200) answeredQuestions.clear();
       clearHighlight();
       lastQuestionKey = prob.key;
     } else {
@@ -396,7 +414,7 @@
       }
 
       if (!res.ok || !data) {
-        setTimeout(() => { if (lastQuestionKey === prob.key) lastQuestionKey = null; }, 5000);
+        setTimeout(() => { if (lastQuestionKey === prob.key) lastQuestionKey = null; }, 3000);
         return;
       }
 
@@ -409,7 +427,7 @@
       }
     } catch(e) {
       console.warn("[Acellus-Zero] MC Solve error:", e);
-      setTimeout(() => { if (lastQuestionKey === prob.key) lastQuestionKey = null; }, 5000);
+      setTimeout(() => { if (lastQuestionKey === prob.key) lastQuestionKey = null; }, 3000);
     } finally {
       isSolving = false;
     }
