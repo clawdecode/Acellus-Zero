@@ -13,3 +13,10 @@ config.json
 # built JS bundles — may contain embedded API keys
 patches/**/assets/index-clean.js
 
+# built APKs, split APKs, signing files, and intermediate build artifacts
+patches/**/*.apk
+patches/**/*.idsig
+patches/**/build/
+patches/**/classes.dex
+
+
