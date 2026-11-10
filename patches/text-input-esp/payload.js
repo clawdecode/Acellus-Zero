@@ -156,7 +156,7 @@
     const mainColor = isLogic ? "#00e5ff" : "#ffcc00";
     const badgeBg = isLogic ? "#00e5ff" : "#ffcc00";
     const accuracy = info?.accuracy || (isLogic ? 100 : 88);
-    const badgeText = `${isLogic ? "⚡ LOGIC" : "🤖 AI"} • ${accuracy}%`;
+    const badgeText = `${isLogic ? "LOGIC" : "AI"} ${accuracy}%`;
 
     const overlay = document.createElement("div");
     overlay.className = "acellus-ti-overlay";
@@ -189,11 +189,12 @@
 
     const badgeSpan = document.createElement("span");
     badgeSpan.style.cssText = [
-      `background:${badgeBg}`,
-      "color:#000",
+      "background:#111",
+      `color:${mainColor}`,
+      `border:1px solid ${mainColor}`,
       "font-size:10px",
       "font-weight:bold",
-      "padding:1px 6px",
+      "padding:2px 6px",
       "border-radius:4px",
       "letter-spacing:0.5px"
     ].join(";");

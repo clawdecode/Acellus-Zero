@@ -185,12 +185,12 @@
       const glowColor = isLogic ? "rgba(0, 229, 255, 0.3)" : "rgba(0, 255, 100, 0.25)";
       const badgeBg = isLogic ? "#00e5ff" : "#00ff66";
       const accuracy = info?.accuracy || (isLogic ? 100 : 88);
-      const badgeText = `${isLogic ? "⚡ LOGIC" : "🤖 AI"} • ${accuracy}%`;
+      const badgeText = `${isLogic ? "LOGIC" : "AI"} ${accuracy}%`;
 
       target.btns.forEach(btn => {
         btn.classList.add("acellus-mc-highlight");
-        btn.style.setProperty("border", `4px solid ${borderColor}`, "important");
-        btn.style.setProperty("box-shadow", `0 0 25px ${borderColor}`, "important");
+        btn.style.setProperty("border", `3px solid ${borderColor}`, "important");
+        btn.style.setProperty("box-shadow", `0 0 20px ${borderColor}`, "important");
         btn.style.setProperty("background", glowColor, "important");
         btn.style.setProperty("transition", "all 0.25s ease", "important");
         btn.style.setProperty("position", "relative", "important");
@@ -199,19 +199,22 @@
         badge.className = "acellus-mc-badge";
         badge.style.cssText = [
           "position:absolute",
-          "top:-12px",
-          "right:12px",
+          "right:10px",
+          "top:50%",
+          "transform:translateY(-50%)",
           "z-index:99999",
-          `background:${badgeBg}`,
-          "color:#000",
+          "background:#111",
+          `color:${borderColor}`,
+          `border:1.5px solid ${borderColor}`,
           "font-size:11px",
           "font-weight:bold",
           "font-family:monospace",
-          "padding:2px 8px",
-          "border-radius:10px",
-          "box-shadow:0 2px 8px rgba(0,0,0,0.5)",
+          "padding:3px 8px",
+          "border-radius:6px",
+          "box-shadow:0 2px 10px rgba(0,0,0,0.7)",
           "pointer-events:none",
-          "white-space:nowrap"
+          "white-space:nowrap",
+          "letter-spacing:0.5px"
         ].join(";");
         badge.textContent = badgeText;
         btn.appendChild(badge);
