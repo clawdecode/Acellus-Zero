@@ -22,7 +22,12 @@
   // Inputs in Acellus text-input problems use name="answer" / name="answer2", no explicit type
   const getAnswerInputs = () => {
     const all = Array.from(document.querySelectorAll('input[name="answer"], input[name="answer2"]'));
-    const visible = all.filter(el => el.offsetWidth > 0 && el.offsetHeight > 0);
+    const visible = all.filter(el => {
+      if (!el.isConnected) return false;
+      const rect = el.getBoundingClientRect();
+      const style = window.getComputedStyle(el);
+      return (el.offsetWidth > 0 || rect.width > 0) && style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0";
+    });
     return visible.length > 0 ? visible : all;
   };
 
@@ -81,8 +86,8 @@
     if (!qText) return null;
 
     const refText = p.referenceHtml ? p.referenceHtml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() : "";
-    const inputCount = p.inputCount || inputs.length;
-    const labels = [p.input1Title, p.input2Title].filter(Boolean);
+    const inputCount = inputs.length;
+    const labels = inputs.length > 1 ? [p.input1Title, p.input2Title].filter(Boolean) : [];
 
     return { qText, refText, inputCount, labels, inputs, key: qText + "||" + inputCount };
   };
@@ -165,9 +170,10 @@
       if (!raw) return;
 
       if (prob.inputCount <= 1) {
-        showOverlay(prob.inputs[0], raw, prob.labels[0] || null);
+        const cleaned = raw.replace(/^(?:Answer|Box\s*\d+)[:.\s]*/i, "").trim();
+        showOverlay(prob.inputs[0], cleaned, prob.labels[0] || null);
       } else {
-        const lines = raw.split("\n").map(l => l.replace(/^Box\s*\d+[:.\s]*/i, "").trim()).filter(Boolean);
+        const lines = raw.split("\n").map(l => l.replace(/^(?:Answer|Box\s*\d+)[:.\s]*/i, "").trim()).filter(Boolean);
         prob.inputs.forEach((inp, i) => {
           showOverlay(inp, lines[i] || raw, prob.labels[i] || ("Box " + (i + 1)));
         });
