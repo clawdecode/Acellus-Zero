@@ -29,12 +29,12 @@
     # Build JSON payload
     new-instance v1, Ljava/lang/StringBuilder;
     invoke-direct {v1}, Ljava/lang/StringBuilder;-><init>()V
-    const-string v2, "{\"model\":\"qwen/qwen3.8-27b\",\"temperature\":0.0,\"messages\":[{\"role\":\"system\",\"content\":\"You are an academic exam solver. For multiple-choice questions, reply with ONLY the single letter: A, B, C, or D. For math or text input questions, reply with ONLY the exact value or short answer without any explanation.\"},{\"role\":\"user\",\"content\":"
+    const-string v2, "{\"model\":\"qwen/qwen3.8-27b\",\"temperature\":0.0,\"messages\":[{\"role\":\"system\",\"content\":\"You are an academic exam solver. In 1 concise sentence, reason or calculate, then output on the last line ONLY: Answer: <Letter or exact value> [Confidence%]\"},{\"role\":\"user\",\"content\":"
     invoke-virtual {v1, v2}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
     invoke-static {p0}, Lorg/json/JSONObject;->quote(Ljava/lang/String;)Ljava/lang/String;
     move-result-object p0
     invoke-virtual {v1, p0}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
-    const-string p0, "}],\"max_tokens\":128}"
+    const-string p0, "}],\"max_tokens\":256}"
     invoke-virtual {v1, p0}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
     invoke-virtual {v1}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
     move-result-object p0

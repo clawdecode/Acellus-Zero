@@ -9,6 +9,7 @@
 
   let lastQuestionKey = null;
   let isSolving = false;
+  let answeredQuestions = new Set();
 
   const cleanText = (html) => {
     if (!html) return "";
@@ -61,6 +62,18 @@
     if (exp) {
       const base = parseFloat(exp[1]), pwr = parseInt(exp[2], 10);
       if (!isNaN(base) && !isNaN(pwr) && pwr <= 10) return cleanNum(Math.pow(base, pwr));
+    }
+
+    const multBy = clean.match(/(?:multiply|product\s+of)\s+(-?\d+(?:\.\d+)?)\s+(?:by|and)\s+(-?\d+(?:\.\d+)?)/i);
+    if (multBy) {
+      const a = parseFloat(multBy[1]), b = parseFloat(multBy[2]);
+      if (!isNaN(a) && !isNaN(b)) return cleanNum(a * b);
+    }
+
+    const divBy = clean.match(/(?:divide)\s+(-?\d+(?:\.\d+)?)\s+(?:by)\s+(-?\d+(?:\.\d+)?)/i);
+    if (divBy) {
+      const a = parseFloat(divBy[1]), b = parseFloat(divBy[2]);
+      if (!isNaN(a) && !isNaN(b) && b !== 0) return cleanNum(a / b);
     }
 
     const bin = clean.match(/(-?\d+(?:\.\d+)?)\s*([x*+\-\/])\s*(-?\d+(?:\.\d+)?)/i);
@@ -134,7 +147,8 @@
 
   const findActiveProblem = () => {
     const container = document.querySelector('[data-current-work="true"]') || document.body;
-    const allBtns = Array.from(container.querySelectorAll('button[data-answer]'));
+    const allBtns = Array.from(container.querySelectorAll('button[data-answer]'))
+      .filter(b => !b.closest('[data-next-work="true"]'));
     if (allBtns.length === 0) return null;
 
     const visibleBtns = allBtns.filter(b => b.offsetParent !== null && b.offsetWidth > 0 && b.offsetHeight > 0);
@@ -224,7 +238,7 @@
       const isLogic = info?.source === "Logic";
       const borderColor = isLogic ? "#00e5ff" : "#00ff66";
       const glowColor = isLogic ? "rgba(0, 229, 255, 0.3)" : "rgba(0, 255, 100, 0.25)";
-      const accuracy = info?.accuracy || (isLogic ? 100 : 88);
+      const accuracy = info?.accuracy || (isLogic ? 100 : 95);
       const badgeText = `${isLogic ? "LOGIC" : "AI"} ${accuracy}%`;
 
       target.btns.forEach(btn => {
@@ -261,6 +275,7 @@
       });
 
       window.__mcNextAction = () => {
+        if (lastQuestionKey) answeredQuestions.add(lastQuestionKey);
         const primary = target.btns.find(b => b.offsetParent !== null) || target.btns[0];
         if (primary) primary.click();
       };
@@ -272,7 +287,7 @@
     const str = content.trim();
 
     // 1. Single letter exact: "a", "B", "d."
-    const exact = str.match(/^([a-d])(?:\.|\b|$)/i);
+    const exact = str.match(/^([a-d])(?:\.||$)/i);
     if (exact) return exact[1].toLowerCase();
 
     // 2. Pattern: "Answer: B", "Option (c)", "Choice: D", "**A**"
@@ -280,10 +295,23 @@
     if (pattern) return pattern[1].toLowerCase();
 
     // 3. Isolated letter token: (a), **b**, [c]
-    const isolated = str.match(/(?:\(|\*|\[|\b)([a-d])(?:\)|\*|\]|\.|\b)/i);
+    const isolated = str.match(/(?:\(|\*|\[|)([a-d])(?:\)|\*|\]|\.|)/i);
     if (isolated) return isolated[1].toLowerCase();
 
     return null;
+  };
+
+  const parseLetterAndConfidence = (content) => {
+    if (!content) return null;
+    const m = content.match(/Answer:\s*([a-d])(?:\s*\[?\(?(\d{1,3})%?\]?\)?)?/i);
+    if (m) {
+      const acc = m[2] ? parseInt(m[2], 10) : 95;
+      return { letter: m[1].toLowerCase(), accuracy: Math.min(acc, 100) };
+    }
+    const m2 = content.match(/\b([a-d])\b[^\n]*?(\d{1,3})%/i);
+    if (m2) return { letter: m2[1].toLowerCase(), accuracy: parseInt(m2[2], 10) };
+    const letter = parseLetter(content);
+    return letter ? { letter, accuracy: 88 } : null;
   };
 
   const solve = async () => {
@@ -298,7 +326,10 @@
       return;
     }
 
+    if (answeredQuestions.has(prob.key)) return;
+
     if (prob.key !== lastQuestionKey) {
+      if (answeredQuestions.size > 100) answeredQuestions.clear();
       clearHighlight();
       lastQuestionKey = prob.key;
     } else {
@@ -349,7 +380,7 @@
       const prompt = (prob.refText ? "Context / Reading Passage:\n" + prob.refText + "\n\n" : "") +
                      "Question:\n" + prob.qText + "\n\n" +
                      "Choices:\n" + prob.choices.map(c => c.letter.toUpperCase() + ") " + (c.text || "[Image]")).join("\n") + "\n\n" +
-                     "Which choice is correct? Output ONLY the single letter (A, B, C, or D).";
+                     "In 1 concise sentence, reason or calculate, then output on the last line ONLY:\nAnswer: <Letter> [Confidence%]";
 
       const res = await fetch("/groq-solve?k=" + encodeURIComponent(apiKey) + "&p=" + encodeURIComponent(prompt));
       let data = null;
@@ -371,10 +402,10 @@
 
       removeRateLimitBanner();
       const rawAns = data.choices?.[0]?.message?.content || "";
-      const letter = parseLetter(rawAns);
+      const parsed = parseLetterAndConfidence(rawAns);
 
-      if (letter) {
-        highlightAnswer(letter, prob.choices, { source: "AI", accuracy: 88 });
+      if (parsed?.letter) {
+        highlightAnswer(parsed.letter, prob.choices, { source: "AI", accuracy: parsed.accuracy });
       }
     } catch(e) {
       console.warn("[Acellus-Zero] MC Solve error:", e);
@@ -383,6 +414,13 @@
       isSolving = false;
     }
   };
+
+  // Lock answer when user clicks any option button
+  document.addEventListener("click", (e) => {
+    if (e.target.closest("button[data-answer]") && lastQuestionKey) {
+      answeredQuestions.add(lastQuestionKey);
+    }
+  }, true);
 
   setInterval(solve, 350);
 
