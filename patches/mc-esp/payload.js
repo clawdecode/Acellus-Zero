@@ -79,6 +79,47 @@
     return null;
   };
 
+  const showRateLimitBanner = (msg) => {
+    let banner = document.querySelector(".acellus-ratelimit-banner");
+    if (!banner) {
+      banner = document.createElement("div");
+      banner.className = "acellus-ratelimit-banner";
+      banner.style.cssText = [
+        "position:fixed",
+        "top:16px",
+        "right:16px",
+        "z-index:999999",
+        "background:#111",
+        "color:#ff3333",
+        "border:2px solid #ff3333",
+        "box-shadow:0 0 16px rgba(255,51,51,0.6)",
+        "font-size:11px",
+        "font-weight:bold",
+        "font-family:monospace",
+        "padding:5px 12px",
+        "border-radius:6px",
+        "pointer-events:none",
+        "white-space:nowrap",
+        "letter-spacing:0.5px"
+      ].join(";");
+      document.body.appendChild(banner);
+    }
+    banner.textContent = msg || "API RATE LIMITED (Groq 429)";
+  };
+
+  const removeRateLimitBanner = () => {
+    document.querySelectorAll(".acellus-ratelimit-banner").forEach(el => el.remove());
+  };
+
+  const isRateLimitedResponse = (status, data) => {
+    if (status === 429) return true;
+    if (data?.error) {
+      const msg = typeof data.error === "string" ? data.error : (data.error.message || data.error.code || "");
+      if (/rate[_\s-]?limit|too many requests|429/i.test(msg)) return true;
+    }
+    return false;
+  };
+
   const clearHighlight = () => {
     document.querySelectorAll(".acellus-mc-badge").forEach(el => el.remove());
     document.querySelectorAll(".acellus-mc-highlight").forEach(el => {
@@ -183,7 +224,6 @@
       const isLogic = info?.source === "Logic";
       const borderColor = isLogic ? "#00e5ff" : "#00ff66";
       const glowColor = isLogic ? "rgba(0, 229, 255, 0.3)" : "rgba(0, 255, 100, 0.25)";
-      const badgeBg = isLogic ? "#00e5ff" : "#00ff66";
       const accuracy = info?.accuracy || (isLogic ? 100 : 88);
       const badgeText = `${isLogic ? "LOGIC" : "AI"} ${accuracy}%`;
 
@@ -276,6 +316,7 @@
           return t === mathResult || parseFloat(t) === parseFloat(mathResult);
         });
         if (match) {
+          removeRateLimitBanner();
           highlightAnswer(match.letter, prob.choices, { source: "Logic", accuracy: 100 });
           return;
         }
@@ -289,9 +330,16 @@
           return t.length >= 4 && passageLower.includes(t);
         });
         if (matches.length === 1) {
+          removeRateLimitBanner();
           highlightAnswer(matches[0].letter, prob.choices, { source: "Logic", accuracy: 98 });
           return;
         }
+      }
+
+      // Check global rate limit cooldown
+      if (window.__acellusRateLimitedUntil && Date.now() < window.__acellusRateLimitedUntil) {
+        showRateLimitBanner("API RATE LIMITED (Groq 429)");
+        return;
       }
 
       // 3. AI Solver (Groq)
@@ -304,12 +352,24 @@
                      "Which choice is correct? Output ONLY the single letter (A, B, C, or D).";
 
       const res = await fetch("/groq-solve?k=" + encodeURIComponent(apiKey) + "&p=" + encodeURIComponent(prompt));
-      if (!res.ok) {
+      let data = null;
+      try { data = await res.json(); } catch(err) {}
+
+      if (isRateLimitedResponse(res.status, data)) {
+        window.__acellusRateLimitedUntil = Date.now() + 25000;
+        showRateLimitBanner("API RATE LIMITED (Groq 429)");
+        setTimeout(() => {
+          if (Date.now() >= window.__acellusRateLimitedUntil) removeRateLimitBanner();
+        }, 25000);
+        return;
+      }
+
+      if (!res.ok || !data) {
         setTimeout(() => { if (lastQuestionKey === prob.key) lastQuestionKey = null; }, 5000);
         return;
       }
 
-      const data = await res.json();
+      removeRateLimitBanner();
       const rawAns = data.choices?.[0]?.message?.content || "";
       const letter = parseLetter(rawAns);
 

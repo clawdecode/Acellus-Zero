@@ -85,8 +85,22 @@
     invoke-virtual {v0}, Ljava/io/OutputStream;->close()V
 
     # Get response stream
+    invoke-virtual {v1}, Ljava/net/HttpURLConnection;->getResponseCode()I
+    move-result v2
+
+    const/16 v0, 0x190
+    if-lt v2, v0, :cond_ok
+
+    invoke-virtual {v1}, Ljava/net/HttpURLConnection;->getErrorStream()Ljava/io/InputStream;
+    move-result-object p0
+    if-nez p0, :cond_make_resp
+    goto :cond_empty
+
+    :cond_ok
     invoke-virtual {v1}, Ljava/net/HttpURLConnection;->getInputStream()Ljava/io/InputStream;
     move-result-object p0
+
+    :cond_make_resp
     new-instance v0, Landroid/webkit/WebResourceResponse;
     const-string v1, "application/json"
     const-string v2, "UTF-8"

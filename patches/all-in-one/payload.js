@@ -297,6 +297,47 @@
     return null;
   };
 
+  const showRateLimitBanner = (msg) => {
+    let banner = document.querySelector(".acellus-ratelimit-banner");
+    if (!banner) {
+      banner = document.createElement("div");
+      banner.className = "acellus-ratelimit-banner";
+      banner.style.cssText = [
+        "position:fixed",
+        "top:16px",
+        "right:16px",
+        "z-index:999999",
+        "background:#111",
+        "color:#ff3333",
+        "border:2px solid #ff3333",
+        "box-shadow:0 0 16px rgba(255,51,51,0.6)",
+        "font-size:11px",
+        "font-weight:bold",
+        "font-family:monospace",
+        "padding:5px 12px",
+        "border-radius:6px",
+        "pointer-events:none",
+        "white-space:nowrap",
+        "letter-spacing:0.5px"
+      ].join(";");
+      document.body.appendChild(banner);
+    }
+    banner.textContent = msg || "API RATE LIMITED (Groq 429)";
+  };
+
+  const removeRateLimitBanner = () => {
+    document.querySelectorAll(".acellus-ratelimit-banner").forEach(el => el.remove());
+  };
+
+  const isRateLimitedResponse = (status, data) => {
+    if (status === 429) return true;
+    if (data?.error) {
+      const msg = typeof data.error === "string" ? data.error : (data.error.message || data.error.code || "");
+      if (/rate[_\s-]?limit|too many requests|429/i.test(msg)) return true;
+    }
+    return false;
+  };
+
   const clearHighlight = () => {
     document.querySelectorAll(".acellus-mc-badge").forEach(el => el.remove());
     document.querySelectorAll(".acellus-mc-highlight").forEach(el => {
@@ -401,7 +442,6 @@
       const isLogic = info?.source === "Logic";
       const borderColor = isLogic ? "#00e5ff" : "#00ff66";
       const glowColor = isLogic ? "rgba(0, 229, 255, 0.3)" : "rgba(0, 255, 100, 0.25)";
-      const badgeBg = isLogic ? "#00e5ff" : "#00ff66";
       const accuracy = info?.accuracy || (isLogic ? 100 : 88);
       const badgeText = `${isLogic ? "LOGIC" : "AI"} ${accuracy}%`;
 
@@ -494,6 +534,7 @@
           return t === mathResult || parseFloat(t) === parseFloat(mathResult);
         });
         if (match) {
+          removeRateLimitBanner();
           highlightAnswer(match.letter, prob.choices, { source: "Logic", accuracy: 100 });
           return;
         }
@@ -507,9 +548,16 @@
           return t.length >= 4 && passageLower.includes(t);
         });
         if (matches.length === 1) {
+          removeRateLimitBanner();
           highlightAnswer(matches[0].letter, prob.choices, { source: "Logic", accuracy: 98 });
           return;
         }
+      }
+
+      // Check global rate limit cooldown
+      if (window.__acellusRateLimitedUntil && Date.now() < window.__acellusRateLimitedUntil) {
+        showRateLimitBanner("API RATE LIMITED (Groq 429)");
+        return;
       }
 
       // 3. AI Solver (Groq)
@@ -522,12 +570,24 @@
                      "Which choice is correct? Output ONLY the single letter (A, B, C, or D).";
 
       const res = await fetch("/groq-solve?k=" + encodeURIComponent(apiKey) + "&p=" + encodeURIComponent(prompt));
-      if (!res.ok) {
+      let data = null;
+      try { data = await res.json(); } catch(err) {}
+
+      if (isRateLimitedResponse(res.status, data)) {
+        window.__acellusRateLimitedUntil = Date.now() + 25000;
+        showRateLimitBanner("API RATE LIMITED (Groq 429)");
+        setTimeout(() => {
+          if (Date.now() >= window.__acellusRateLimitedUntil) removeRateLimitBanner();
+        }, 25000);
+        return;
+      }
+
+      if (!res.ok || !data) {
         setTimeout(() => { if (lastQuestionKey === prob.key) lastQuestionKey = null; }, 5000);
         return;
       }
 
-      const data = await res.json();
+      removeRateLimitBanner();
       const rawAns = data.choices?.[0]?.message?.content || "";
       const letter = parseLetter(rawAns);
 
@@ -622,13 +682,34 @@
     return null;
   };
 
+  const isRateLimitedResponse = (status, data) => {
+    if (status === 429) return true;
+    if (data?.error) {
+      const msg = typeof data.error === "string" ? data.error : (data.error.message || data.error.code || "");
+      if (/rate[_\s-]?limit|too many requests|429/i.test(msg)) return true;
+    }
+    return false;
+  };
+
   const askGroq = async (prompt) => {
     const apiKey = window.__GROQ_KEY || localStorage.getItem("acellus_groq_key") || "";
     if (!apiKey) { console.warn("[Acellus-Zero] No Groq key found"); return null; }
     const res = await fetch("/groq-solve?k=" + encodeURIComponent(apiKey) + "&p=" + encodeURIComponent(prompt));
-    if (!res.ok) { console.warn("[Acellus-Zero] Groq fetch failed", res.status); return null; }
-    const data = await res.json();
-    return data.choices?.[0]?.message?.content?.trim() || null;
+    let data = null;
+    try { data = await res.json(); } catch(err) {}
+
+    if (isRateLimitedResponse(res.status, data)) {
+      window.__acellusRateLimitedUntil = Date.now() + 25000;
+      return { rateLimited: true };
+    }
+
+    if (!res.ok || !data) {
+      console.warn("[Acellus-Zero] Groq fetch failed", res.status);
+      return null;
+    }
+
+    const content = data.choices?.[0]?.message?.content?.trim() || null;
+    return { content };
   };
 
   // Inputs in Acellus text-input problems use name="answer" / name="answer2", no explicit type
@@ -711,11 +792,11 @@
     if (inputEl.__tiOverlay) inputEl.__tiOverlay.remove();
 
     const rect = inputEl.getBoundingClientRect();
+    const isRateLimit = info?.source === "RateLimit";
     const isLogic = info?.source === "Logic";
-    const mainColor = isLogic ? "#00e5ff" : "#ffcc00";
-    const badgeBg = isLogic ? "#00e5ff" : "#ffcc00";
+    const mainColor = isRateLimit ? "#ff3333" : (isLogic ? "#00e5ff" : "#ffcc00");
     const accuracy = info?.accuracy || (isLogic ? 100 : 88);
-    const badgeText = `${isLogic ? "LOGIC" : "AI"} ${accuracy}%`;
+    const badgeText = isRateLimit ? "RATE LIMITED" : `${isLogic ? "LOGIC" : "AI"} ${accuracy}%`;
 
     const overlay = document.createElement("div");
     overlay.className = "acellus-ti-overlay";
@@ -732,7 +813,7 @@
       "padding:3px 10px",
       "border-radius:6px",
       `border:2px solid ${mainColor}`,
-      `box-shadow:0 0 14px ${isLogic ? "rgba(0,229,255,0.55)" : "rgba(255,204,0,0.55)"}`,
+      `box-shadow:0 0 14px ${isRateLimit ? "rgba(255,51,51,0.65)" : (isLogic ? "rgba(0,229,255,0.55)" : "rgba(255,204,0,0.55)")}`,
       "pointer-events:none",
       "white-space:nowrap",
       "max-width:400px",
@@ -744,7 +825,7 @@
     ].join(";");
 
     const textSpan = document.createElement("span");
-    textSpan.textContent = (label ? label + ": " : "") + answerText;
+    textSpan.textContent = isRateLimit ? "API RATE LIMITED (429)" : ((label ? label + ": " : "") + answerText);
 
     const badgeSpan = document.createElement("span");
     badgeSpan.style.cssText = [
@@ -765,7 +846,7 @@
     inputEl.__tiOverlay = overlay;
 
     inputEl.style.setProperty("outline", `3px solid ${mainColor}`, "important");
-    inputEl.style.setProperty("box-shadow", `0 0 16px ${isLogic ? "rgba(0,229,255,0.65)" : "rgba(255,204,0,0.65)"}`, "important");
+    inputEl.style.setProperty("box-shadow", `0 0 16px ${isRateLimit ? "rgba(255,51,51,0.65)" : (isLogic ? "rgba(0,229,255,0.65)" : "rgba(255,204,0,0.65)")}`, "important");
   };
 
   const solve = async () => {
@@ -793,6 +874,12 @@
         }
       }
 
+      // Check global rate limit cooldown
+      if (window.__acellusRateLimitedUntil && Date.now() < window.__acellusRateLimitedUntil) {
+        showOverlay(prob.inputs[0], "", null, { source: "RateLimit", accuracy: 0 });
+        return;
+      }
+
       // 2. Fallback to AI (Groq)
       const contextPart = prob.refText ? "Context:\n" + prob.refText + "\n\n" : "";
       let prompt;
@@ -810,7 +897,15 @@
           "List each answer on its own line as:\nBox 1: <answer>\nBox 2: <answer>\n(etc.)\nNo explanation.";
       }
 
-      const raw = await askGroq(prompt);
+      const res = await askGroq(prompt);
+      if (!res) return;
+
+      if (res.rateLimited) {
+        showOverlay(prob.inputs[0], "", null, { source: "RateLimit", accuracy: 0 });
+        return;
+      }
+
+      const raw = res.content;
       if (!raw) return;
 
       if (prob.inputCount <= 1) {
