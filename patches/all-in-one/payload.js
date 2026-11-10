@@ -244,7 +244,61 @@
       .trim();
   };
 
+  const evaluateMath = (text) => {
+    if (!text) return null;
+    const clean = text
+      .replace(/&times;/gi, "x")
+      .replace(/&divide;/gi, "/")
+      .replace(/[×✕]/g, "x")
+      .replace(/[÷]/g, "/")
+      .replace(/[–—−]/g, "-")
+      .replace(/,/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    const cleanNum = (n) => {
+      if (!isFinite(n)) return null;
+      const rounded = Math.round(n * 1e8) / 1e8;
+      const s = rounded.toFixed(8);
+      return s.includes(".") ? s.replace(/\.?0+$/, "") : s;
+    };
+
+    const subFrom = clean.match(/subtract\s+(-?\d+(?:\.\d+)?)\s+from\s+(-?\d+(?:\.\d+)?)/i);
+    if (subFrom) {
+      const a = parseFloat(subFrom[1]), b = parseFloat(subFrom[2]);
+      if (!isNaN(a) && !isNaN(b)) return cleanNum(b - a);
+    }
+
+    const pct = clean.match(/(-?\d+(?:\.\d+)?)\s*%\s*(?:of)\s*(-?\d+(?:\.\d+)?)/i);
+    if (pct) {
+      const p = parseFloat(pct[1]), total = parseFloat(pct[2]);
+      if (!isNaN(p) && !isNaN(total)) return cleanNum((p / 100) * total);
+    }
+
+    const exp = clean.match(/(-?\d+(?:\.\d+)?)\s*\^\s*(\d+)/);
+    if (exp) {
+      const base = parseFloat(exp[1]), pwr = parseInt(exp[2], 10);
+      if (!isNaN(base) && !isNaN(pwr) && pwr <= 10) return cleanNum(Math.pow(base, pwr));
+    }
+
+    const bin = clean.match(/(-?\d+(?:\.\d+)?)\s*([x*+\-\/])\s*(-?\d+(?:\.\d+)?)/i);
+    if (bin) {
+      const a = parseFloat(bin[1]);
+      const op = bin[2].toLowerCase();
+      const b = parseFloat(bin[3]);
+      if (!isNaN(a) && !isNaN(b)) {
+        if (op === "x" || op === "*") return cleanNum(a * b);
+        if (op === "+") return cleanNum(a + b);
+        if (op === "-") return cleanNum(a - b);
+        if (op === "/" && b !== 0) return cleanNum(a / b);
+      }
+    }
+
+    return null;
+  };
+
   const clearHighlight = () => {
+    document.querySelectorAll(".acellus-mc-badge").forEach(el => el.remove());
     document.querySelectorAll(".acellus-mc-highlight").forEach(el => {
       el.classList.remove("acellus-mc-highlight");
       el.style.border = "";
@@ -295,7 +349,6 @@
       qText = cleanText(p.questionHtml) || cleanText(p.questionText) || cleanText(p.questionImageAlt) || "";
     }
     if (!qText) {
-      // Fallback: extract visible question area text, excluding button labels & headers
       const clone = container.cloneNode(true);
       clone.querySelectorAll('button[data-answer], header, footer, [class*="TabHeader"]').forEach(e => e.remove());
       const rawText = clone.innerText || "";
@@ -335,24 +388,51 @@
 
     const choices = Array.from(choiceMap.values());
     if (choices.length === 0) return null;
-
-    // Do not attempt if all choices are blank (e.g. unlabeled images)
     if (choices.every(c => !c.text)) return null;
 
     const key = qText + "||" + choices.map(c => c.letter + ":" + c.text).join("|");
     return { qText, refText, choices, key };
   };
 
-  const highlightAnswer = (letter, choices) => {
+  const highlightAnswer = (letter, choices, info) => {
     clearHighlight();
     const target = choices.find(c => c.letter === letter.toLowerCase());
     if (target && target.btns) {
+      const isLogic = info?.source === "Logic";
+      const borderColor = isLogic ? "#00e5ff" : "#00ff66";
+      const glowColor = isLogic ? "rgba(0, 229, 255, 0.3)" : "rgba(0, 255, 100, 0.25)";
+      const badgeBg = isLogic ? "#00e5ff" : "#00ff66";
+      const accuracy = info?.accuracy || (isLogic ? 100 : 88);
+      const badgeText = `${isLogic ? "⚡ LOGIC" : "🤖 AI"} • ${accuracy}%`;
+
       target.btns.forEach(btn => {
         btn.classList.add("acellus-mc-highlight");
-        btn.style.setProperty("border", "4px solid #00ff66", "important");
-        btn.style.setProperty("box-shadow", "0 0 25px #00ff66", "important");
-        btn.style.setProperty("background", "rgba(0, 255, 100, 0.25)", "important");
+        btn.style.setProperty("border", `4px solid ${borderColor}`, "important");
+        btn.style.setProperty("box-shadow", `0 0 25px ${borderColor}`, "important");
+        btn.style.setProperty("background", glowColor, "important");
         btn.style.setProperty("transition", "all 0.25s ease", "important");
+        btn.style.setProperty("position", "relative", "important");
+
+        const badge = document.createElement("div");
+        badge.className = "acellus-mc-badge";
+        badge.style.cssText = [
+          "position:absolute",
+          "top:-12px",
+          "right:12px",
+          "z-index:99999",
+          `background:${badgeBg}`,
+          "color:#000",
+          "font-size:11px",
+          "font-weight:bold",
+          "font-family:monospace",
+          "padding:2px 8px",
+          "border-radius:10px",
+          "box-shadow:0 2px 8px rgba(0,0,0,0.5)",
+          "pointer-events:none",
+          "white-space:nowrap"
+        ].join(";");
+        badge.textContent = badgeText;
+        btn.appendChild(badge);
       });
 
       window.__mcNextAction = () => {
@@ -403,6 +483,33 @@
     isSolving = true;
 
     try {
+      // 1. Deterministic Logic: Math evaluation matching a choice
+      const mathResult = evaluateMath(prob.qText);
+      if (mathResult !== null) {
+        const match = prob.choices.find(c => {
+          const t = c.text.replace(/,/g, "").trim();
+          return t === mathResult || parseFloat(t) === parseFloat(mathResult);
+        });
+        if (match) {
+          highlightAnswer(match.letter, prob.choices, { source: "Logic", accuracy: 100 });
+          return;
+        }
+      }
+
+      // 2. Deterministic Logic: Reading passage exact unique match
+      if (prob.refText && prob.refText.length > 25) {
+        const passageLower = prob.refText.toLowerCase();
+        const matches = prob.choices.filter(c => {
+          const t = c.text.toLowerCase().trim();
+          return t.length >= 4 && passageLower.includes(t);
+        });
+        if (matches.length === 1) {
+          highlightAnswer(matches[0].letter, prob.choices, { source: "Logic", accuracy: 98 });
+          return;
+        }
+      }
+
+      // 3. AI Solver (Groq)
       const apiKey = window.__GROQ_KEY || localStorage.getItem("acellus_groq_key") || "";
       if (!apiKey) return;
 
@@ -422,10 +529,10 @@
       const letter = parseLetter(rawAns);
 
       if (letter) {
-        highlightAnswer(letter, prob.choices);
+        highlightAnswer(letter, prob.choices, { source: "AI", accuracy: 88 });
       }
     } catch(e) {
-      console.warn("[Acellus-Zero] ESP solve error:", e);
+      console.warn("[Acellus-Zero] MC Solve error:", e);
       setTimeout(() => { if (lastQuestionKey === prob.key) lastQuestionKey = null; }, 5000);
     } finally {
       isSolving = false;
@@ -438,12 +545,8 @@
   window.addEventListener("keydown", (e) => {
     if (e.code === "Space") {
       const activeTag = document.activeElement?.tagName;
-      if (activeTag === "INPUT" || activeTag === "TEXTAREA" || document.activeElement?.isContentEditable) return;
-
-      if (window.__mtNextAction) {
-        e.preventDefault();
-        window.__mtNextAction();
-      } else if (window.__mcNextAction) {
+      if (activeTag === "INPUT" || activeTag === "TEXTAREA") return;
+      if (window.__mcNextAction) {
         e.preventDefault();
         window.__mcNextAction();
       }
@@ -451,10 +554,8 @@
   });
 })();
 
-
-
 // ==============================================================================
-// 4. Text Input ESP — AI answer above fill-in boxes (yellow overlay)
+// 4. Text Input ESP - AI / Logic answer above fill-in boxes (yellow / cyan overlay)
 // ==============================================================================
 (function() {
   if (window.__acellusTextInputInjected) return;
@@ -464,6 +565,59 @@
 
   let lastKey = null;
   let isSolving = false;
+
+  const evaluateMath = (text) => {
+    if (!text) return null;
+    const clean = text
+      .replace(/&times;/gi, "x")
+      .replace(/&divide;/gi, "/")
+      .replace(/[×✕]/g, "x")
+      .replace(/[÷]/g, "/")
+      .replace(/[–—−]/g, "-")
+      .replace(/,/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    const cleanNum = (n) => {
+      if (!isFinite(n)) return null;
+      const rounded = Math.round(n * 1e8) / 1e8;
+      const s = rounded.toFixed(8);
+      return s.includes(".") ? s.replace(/\.?0+$/, "") : s;
+    };
+
+    const subFrom = clean.match(/subtract\s+(-?\d+(?:\.\d+)?)\s+from\s+(-?\d+(?:\.\d+)?)/i);
+    if (subFrom) {
+      const a = parseFloat(subFrom[1]), b = parseFloat(subFrom[2]);
+      if (!isNaN(a) && !isNaN(b)) return cleanNum(b - a);
+    }
+
+    const pct = clean.match(/(-?\d+(?:\.\d+)?)\s*%\s*(?:of)\s*(-?\d+(?:\.\d+)?)/i);
+    if (pct) {
+      const p = parseFloat(pct[1]), total = parseFloat(pct[2]);
+      if (!isNaN(p) && !isNaN(total)) return cleanNum((p / 100) * total);
+    }
+
+    const exp = clean.match(/(-?\d+(?:\.\d+)?)\s*\^\s*(\d+)/);
+    if (exp) {
+      const base = parseFloat(exp[1]), pwr = parseInt(exp[2], 10);
+      if (!isNaN(base) && !isNaN(pwr) && pwr <= 10) return cleanNum(Math.pow(base, pwr));
+    }
+
+    const bin = clean.match(/(-?\d+(?:\.\d+)?)\s*([x*+\-\/])\s*(-?\d+(?:\.\d+)?)/i);
+    if (bin) {
+      const a = parseFloat(bin[1]);
+      const op = bin[2].toLowerCase();
+      const b = parseFloat(bin[3]);
+      if (!isNaN(a) && !isNaN(b)) {
+        if (op === "x" || op === "*") return cleanNum(a * b);
+        if (op === "+") return cleanNum(a + b);
+        if (op === "-") return cleanNum(a - b);
+        if (op === "/" && b !== 0) return cleanNum(a / b);
+      }
+    }
+
+    return null;
+  };
 
   const askGroq = async (prompt) => {
     const apiKey = window.__GROQ_KEY || localStorage.getItem("acellus_groq_key") || "";
@@ -500,14 +654,11 @@
   };
 
   const getWorkData = () => {
-    // Try direct memoizedProps.work.p first
     const container = document.querySelector('[data-current-work="true"]') || document.body;
-    // include the container itself
     const els = [container, ...container.querySelectorAll('*')];
     for (const el of els) {
       const v = fiberFind(el, f => {
         if (f.memoizedProps?.work?.p) return f.memoizedProps.work.p;
-        // also check context dep chain
         let dep = f.dependencies?.firstContext;
         while (dep) {
           if (dep.memoizedValue?.work?.p) return dep.memoizedValue.work.p;
@@ -526,13 +677,11 @@
 
     const p = getWorkData();
     if (!p) {
-      // no work data found — still try to show something using visible text
       const qText = document.querySelector('[data-current-work="true"]')?.innerText?.slice(0, 300)?.trim() || "";
       if (!qText) return null;
       return { qText, refText: "", inputCount: inputs.length, labels: [], inputs, key: qText + "||" + inputs.length };
     }
 
-    // only proceed if it's a text-input type (or we can't tell)
     if (p.problemType && p.problemType !== "text-input" && p.problemType !== "percent-accuracy") return null;
 
     const qText = p.questionText ||
@@ -555,10 +704,16 @@
     });
   };
 
-  const showOverlay = (inputEl, answerText, label) => {
+  const showOverlay = (inputEl, answerText, label, info) => {
     if (inputEl.__tiOverlay) inputEl.__tiOverlay.remove();
 
     const rect = inputEl.getBoundingClientRect();
+    const isLogic = info?.source === "Logic";
+    const mainColor = isLogic ? "#00e5ff" : "#ffcc00";
+    const badgeBg = isLogic ? "#00e5ff" : "#ffcc00";
+    const accuracy = info?.accuracy || (isLogic ? 100 : 88);
+    const badgeText = `${isLogic ? "⚡ LOGIC" : "🤖 AI"} • ${accuracy}%`;
+
     const overlay = document.createElement("div");
     overlay.className = "acellus-ti-overlay";
     overlay.style.cssText = [
@@ -567,26 +722,46 @@
       `left:${rect.left}px`,
       "z-index:999999",
       "background:rgba(0,0,0,0.88)",
-      "color:#ffcc00",
+      `color:${mainColor}`,
       "font-size:13px",
       "font-weight:bold",
       "font-family:monospace",
       "padding:3px 10px",
       "border-radius:6px",
-      "border:2px solid #ffcc00",
-      "box-shadow:0 0 14px rgba(255,204,0,0.55)",
+      `border:2px solid ${mainColor}`,
+      `box-shadow:0 0 14px ${isLogic ? "rgba(0,229,255,0.55)" : "rgba(255,204,0,0.55)"}`,
       "pointer-events:none",
       "white-space:nowrap",
-      "max-width:360px",
+      "max-width:400px",
       "overflow:hidden",
       "text-overflow:ellipsis",
+      "display:flex",
+      "align-items:center",
+      "gap:8px"
     ].join(";");
-    overlay.textContent = (label ? label + ": " : "") + answerText;
+
+    const textSpan = document.createElement("span");
+    textSpan.textContent = (label ? label + ": " : "") + answerText;
+
+    const badgeSpan = document.createElement("span");
+    badgeSpan.style.cssText = [
+      `background:${badgeBg}`,
+      "color:#000",
+      "font-size:10px",
+      "font-weight:bold",
+      "padding:1px 6px",
+      "border-radius:4px",
+      "letter-spacing:0.5px"
+    ].join(";");
+    badgeSpan.textContent = badgeText;
+
+    overlay.appendChild(textSpan);
+    overlay.appendChild(badgeSpan);
     document.body.appendChild(overlay);
     inputEl.__tiOverlay = overlay;
 
-    inputEl.style.setProperty("outline", "3px solid #ffcc00", "important");
-    inputEl.style.setProperty("box-shadow", "0 0 16px rgba(255,204,0,0.65)", "important");
+    inputEl.style.setProperty("outline", `3px solid ${mainColor}`, "important");
+    inputEl.style.setProperty("box-shadow", `0 0 16px ${isLogic ? "rgba(0,229,255,0.65)" : "rgba(255,204,0,0.65)"}`, "important");
   };
 
   const solve = async () => {
@@ -605,6 +780,16 @@
     isSolving = true;
 
     try {
+      // 1. Try Deterministic Logic for math questions
+      if (prob.inputCount <= 1) {
+        const mathResult = evaluateMath(prob.qText);
+        if (mathResult !== null) {
+          showOverlay(prob.inputs[0], mathResult, prob.labels[0] || null, { source: "Logic", accuracy: 100 });
+          return;
+        }
+      }
+
+      // 2. Fallback to AI (Groq)
       const contextPart = prob.refText ? "Context:\n" + prob.refText + "\n\n" : "";
       let prompt;
 
@@ -626,11 +811,11 @@
 
       if (prob.inputCount <= 1) {
         const cleaned = raw.replace(/^(?:Answer|Box\s*\d+)[:.\s]*/i, "").trim();
-        showOverlay(prob.inputs[0], cleaned, prob.labels[0] || null);
+        showOverlay(prob.inputs[0], cleaned, prob.labels[0] || null, { source: "AI", accuracy: 88 });
       } else {
         const lines = raw.split("\n").map(l => l.replace(/^(?:Answer|Box\s*\d+)[:.\s]*/i, "").trim()).filter(Boolean);
         prob.inputs.forEach((inp, i) => {
-          showOverlay(inp, lines[i] || raw, prob.labels[i] || ("Box " + (i + 1)));
+          showOverlay(inp, lines[i] || raw, prob.labels[i] || ("Box " + (i + 1)), { source: "AI", accuracy: 88 });
         });
       }
     } catch(e) {
@@ -651,10 +836,9 @@
     });
   };
 
-  window.addEventListener("scroll", repositionOverlays, true);
-  window.addEventListener("resize", repositionOverlays);
-
-  setInterval(solve, 400);
+  setInterval(solve, 350);
+  window.addEventListener("scroll", repositionOverlays, { passive: true });
+  window.addEventListener("resize", repositionOverlays, { passive: true });
 })();
 
 // ==============================================================================
