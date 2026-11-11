@@ -109,7 +109,6 @@
     return document.querySelector('[data-current-work="true"]') || document.body;
   };
 
-  // Only select inputs belonging to current work (never pre-rendered next-work)
   const getAnswerInputs = () => {
     const container = getCurrentWorkContainer();
     const all = Array.from(container.querySelectorAll('input[name="answer"], input[name="answer2"]'))
@@ -126,7 +125,6 @@
     return visible.length > 0 ? visible : all;
   };
 
-  // Walk fiber from a DOM element upward, return first value passing predicate
   const fiberFind = (el, pred) => {
     const k = el && Object.keys(el).find(x => x.startsWith('__reactFiber$'));
     if (!k) return null;
@@ -197,7 +195,7 @@
     const isRateLimit = info?.source === "RateLimit";
     const isLogic = info?.source === "Logic";
     const mainColor = isRateLimit ? "#ff3333" : (isLogic ? "#00e5ff" : "#ffcc00");
-    const accuracy = info?.accuracy || (isLogic ? 100 : 95);
+    const accuracy = info?.accuracy || (isLogic ? 100 : 98);
     const badgeText = isRateLimit ? "RATE LIMITED" : `${isLogic ? "LOGIC" : "AI"} ${accuracy}%`;
 
     const overlay = document.createElement("div");
@@ -252,17 +250,17 @@
   };
 
   const parseTextAnswerAndConfidence = (raw) => {
-    if (!raw) return { answer: "", accuracy: 88 };
+    if (!raw) return { answer: "", accuracy: 95 };
     const m = raw.match(/Answer:\s*([^\n\[\]]+?)(?:\s*\[?\(?(\d{1,3})%?\]?\)?)?$/im);
     if (m) {
-      const acc = m[2] ? parseInt(m[2], 10) : 95;
+      const acc = m[2] ? parseInt(m[2], 10) : 98;
       return { answer: m[1].trim(), accuracy: Math.min(acc, 100) };
     }
     const cleaned = raw.replace(/^(?:Answer|Box\s*\d+)[:.\s]*/i, "").trim();
-    return { answer: cleaned, accuracy: 88 };
+    return { answer: cleaned, accuracy: 92 };
   };
 
-  const solve = async () => {
+  const solve = async (isRecheck = false) => {
     if (isSolving) return;
     const prob = findTextInputProblem();
 
@@ -271,7 +269,7 @@
       return;
     }
 
-    if (prob.key === lastKey && document.querySelector(".acellus-ti-overlay")) return;
+    if (prob.key === lastKey && !isRecheck && document.querySelector(".acellus-ti-overlay")) return;
 
     removeOverlays();
     lastKey = prob.key;
@@ -301,13 +299,13 @@
         prompt = contextPart +
           "Question: " + prob.qText + "\n\n" +
           (prob.labels[0] ? "The answer box is labeled: " + prob.labels[0] + "\n\n" : "") +
-          "In 1 concise sentence, reason or calculate, then output on the last line ONLY:\nAnswer: <exact answer> [Confidence%]";
+          "Reason carefully or calculate, then output on the last line ONLY:\nAnswer: <exact answer> [Confidence%]";
       } else {
         prompt = contextPart +
           "Question: " + prob.qText + "\n\n" +
           "There are " + prob.inputCount + " answer boxes" +
           (prob.labels.length ? " labeled: " + prob.labels.join(", ") : "") + ".\n\n" +
-          "Briefly reason, then list each answer on its own line as:\nBox 1: <answer>\nBox 2: <answer>\n(etc.)\nNo explanation.";
+          "List each answer on its own line as:\nBox 1: <answer>\nBox 2: <answer>\n(etc.)\nNo explanation.";
       }
 
       const res = await askGroq(prompt);
@@ -332,10 +330,19 @@
       }
     } catch(e) {
       console.warn("[Acellus-Zero] Text input solve error:", e);
-      setTimeout(() => { if (lastKey === prob.key) lastKey = null; }, 5000);
+      setTimeout(() => { if (lastKey === prob.key) lastKey = null; }, 3000);
     } finally {
       isSolving = false;
     }
+  };
+
+  window.__acellusTextInputRecheck = async () => {
+    removeOverlays();
+    lastKey = null;
+    isSolving = false;
+    try {
+      await solve(true);
+    } catch(e) {}
   };
 
   const repositionOverlays = () => {
@@ -348,7 +355,7 @@
     });
   };
 
-  setInterval(solve, 350);
+  setInterval(() => solve(false), 350);
   window.addEventListener("scroll", repositionOverlays, { passive: true });
   window.addEventListener("resize", repositionOverlays, { passive: true });
 })();

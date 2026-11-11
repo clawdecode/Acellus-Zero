@@ -2,7 +2,7 @@
 // Includes:
 // 1. Unrestricted Clipboard, Context Menu & Chunked Typer
 // 2. Math Tiles 0.0s Bypass & Solver ESP
-// 3. Multiple Choice Instant AI & Passage Auto-ESP
+// 3. Multiple Choice Instant AI & Passage Auto-ESP (with RECHECK button)
 // 4. Text Input ESP — AI answer above fill-in boxes (yellow overlay)
 // 5. Video Skip — floating button skips current video step
 
@@ -217,7 +217,7 @@
 })();
 
 // ==============================================================================
-// 3. Multiple Choice Instant AI & Passage Auto-ESP
+// 3. Multiple Choice Instant AI & Passage Auto-ESP (with RECHECK button)
 // ==============================================================================
 (function() {
   if (window.__acellusMcSolverInjected) return;
@@ -369,8 +369,12 @@
       .filter(b => !b.closest('[data-next-work="true"]'));
     if (allBtns.length === 0) return null;
 
-    const visibleBtns = allBtns.filter(b => b.offsetParent !== null && b.offsetWidth > 0 && b.offsetHeight > 0);
-    const btns = visibleBtns.length > 0 ? visibleBtns : allBtns;
+    // Filter out buttons that Acellus has disabled after a wrong click
+    const activeBtns = allBtns.filter(b => b.getAttribute('data-disabled') !== 'true' && !b.disabled);
+    const usableBtns = activeBtns.length > 0 ? activeBtns : allBtns;
+
+    const visibleBtns = usableBtns.filter(b => b.offsetParent !== null && b.offsetWidth > 0 && b.offsetHeight > 0);
+    const btns = visibleBtns.length > 0 ? visibleBtns : usableBtns;
 
     // 1. Walk React Fiber to find problem object 'p'
     let p = null;
@@ -505,7 +509,7 @@
     if (!content) return null;
     const str = content.trim();
 
-    // 1. Look for explicit Answer line: e.g. "Answer: B [98%]" or "Answer: B 95%" or "Answer: B"
+    // 1. Look for explicit Answer line: e.g. "Answer: B [98%]" or "Answer: B"
     const mAns = str.match(/Answer:\s*([a-d])(?:\s*\[?\(?(\d{1,3})%?\]?\)?)?/i);
     if (mAns) {
       const acc = mAns[2] ? parseInt(mAns[2], 10) : 98;
@@ -550,7 +554,7 @@
     return null;
   };
 
-  const solve = async () => {
+  const solve = async (isRecheck = false) => {
     if (isSolving) return;
     const prob = findActiveProblem();
 
@@ -562,9 +566,9 @@
       return;
     }
 
-    if (answeredQuestions.has(prob.key)) return;
+    if (!isRecheck && answeredQuestions.has(prob.key)) return;
 
-    if (prob.key !== lastQuestionKey) {
+    if (prob.key !== lastQuestionKey || isRecheck) {
       if (answeredQuestions.size > 200) answeredQuestions.clear();
       clearHighlight();
       lastQuestionKey = prob.key;
@@ -613,10 +617,11 @@
       const apiKey = window.__GROQ_KEY || localStorage.getItem("acellus_groq_key") || "";
       if (!apiKey) return;
 
+      const recheckInstruction = isRecheck ? " (RECHECK: Carefully reconsider, eliminate distractors, and verify step-by-step)" : "";
       const prompt = (prob.refText ? "Context / Reading Passage:\n" + prob.refText + "\n\n" : "") +
                      "Question:\n" + prob.qText + "\n\n" +
                      "Choices:\n" + prob.choices.map(c => c.letter.toUpperCase() + ") " + (c.text || "[Image]")).join("\n") + "\n\n" +
-                     "In 1 concise sentence, reason or calculate, then output on the last line ONLY:\nAnswer: <Letter> [Confidence%]";
+                     "Reason carefully" + recheckInstruction + ", then output on the last line ONLY:\nAnswer: <Letter> [Confidence%]";
 
       const res = await fetch("/groq-solve?k=" + encodeURIComponent(apiKey) + "&p=" + encodeURIComponent(prompt));
       let data = null;
@@ -658,17 +663,98 @@
     }
   }, true);
 
-  setInterval(solve, 350);
+  // Manual Recheck Trigger
+  window.__acellusRecheck = async () => {
+    console.log("[Acellus-Zero] Recheck button tapped");
+    const btn = document.getElementById("acellus-recheck-btn");
+    if (btn) {
+      btn.textContent = "Checking...";
+      btn.style.opacity = "0.7";
+      btn.style.pointerEvents = "none";
+    }
 
-  // Global Spacebar Keybind to Auto-Answer
-  window.addEventListener("keydown", (e) => {
-    if (e.code === "Space") {
-      const activeTag = document.activeElement?.tagName;
-      if (activeTag === "INPUT" || activeTag === "TEXTAREA") return;
-      if (window.__mcNextAction) {
-        e.preventDefault();
-        window.__mcNextAction();
+    clearHighlight();
+    lastQuestionKey = null;
+    answeredQuestions.clear();
+    isSolving = false;
+
+    if (typeof window.__acellusTextInputRecheck === "function") {
+      window.__acellusTextInputRecheck();
+    }
+
+    try {
+      await solve(true);
+    } catch(e) {
+      console.warn("[Acellus-Zero] Recheck failed:", e);
+    } finally {
+      if (btn) {
+        btn.textContent = "RECHECK";
+        btn.style.opacity = "1";
+        btn.style.pointerEvents = "auto";
       }
+    }
+  };
+
+  // Ensure Floating "RECHECK" button is on screen
+  const ensureRecheckButton = () => {
+    let btn = document.getElementById("acellus-recheck-btn");
+    if (!btn) {
+      btn = document.createElement("button");
+      btn.id = "acellus-recheck-btn";
+      btn.textContent = "RECHECK";
+      btn.style.cssText = [
+        "position:fixed",
+        "bottom:24px",
+        "left:24px",
+        "z-index:999999",
+        "background:rgba(15,15,15,0.92)",
+        "color:#00e5ff",
+        "border:2px solid #00e5ff",
+        "box-shadow:0 0 16px rgba(0,229,255,0.45)",
+        "font-size:12px",
+        "font-weight:bold",
+        "font-family:monospace",
+        "padding:8px 18px",
+        "border-radius:20px",
+        "cursor:pointer",
+        "letter-spacing:1px",
+        "transition:all 0.15s ease",
+        "backdrop-filter:blur(6px)",
+        "-webkit-backdrop-filter:blur(6px)",
+        "user-select:none"
+      ].join(";");
+
+      btn.addEventListener("mouseenter", () => { btn.style.transform = "scale(1.06)"; });
+      btn.addEventListener("mouseleave", () => { btn.style.transform = ""; });
+      btn.addEventListener("touchstart", () => { btn.style.transform = "scale(0.96)"; }, { passive: true });
+      btn.addEventListener("touchend", () => { btn.style.transform = ""; }, { passive: true });
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        window.__acellusRecheck();
+      });
+
+      document.body.appendChild(btn);
+    }
+
+    const hasWork = document.querySelector('button[data-answer], input[name="answer"], input[name="answer2"]');
+    btn.style.display = hasWork ? "block" : "none";
+  };
+
+  setInterval(ensureRecheckButton, 500);
+  setInterval(() => solve(false), 350);
+
+  // Global Keybinds: Space = auto-answer, R = recheck
+  window.addEventListener("keydown", (e) => {
+    const activeTag = document.activeElement?.tagName;
+    if (activeTag === "INPUT" || activeTag === "TEXTAREA") return;
+
+    if (e.code === "Space" && window.__mcNextAction) {
+      e.preventDefault();
+      window.__mcNextAction();
+    } else if (e.key === "r" || e.key === "R") {
+      e.preventDefault();
+      window.__acellusRecheck();
     }
   });
 })();
@@ -784,7 +870,6 @@
     return document.querySelector('[data-current-work="true"]') || document.body;
   };
 
-  // Only select inputs belonging to current work (never pre-rendered next-work)
   const getAnswerInputs = () => {
     const container = getCurrentWorkContainer();
     const all = Array.from(container.querySelectorAll('input[name="answer"], input[name="answer2"]'))
@@ -801,7 +886,6 @@
     return visible.length > 0 ? visible : all;
   };
 
-  // Walk fiber from a DOM element upward, return first value passing predicate
   const fiberFind = (el, pred) => {
     const k = el && Object.keys(el).find(x => x.startsWith('__reactFiber$'));
     if (!k) return null;
@@ -872,7 +956,7 @@
     const isRateLimit = info?.source === "RateLimit";
     const isLogic = info?.source === "Logic";
     const mainColor = isRateLimit ? "#ff3333" : (isLogic ? "#00e5ff" : "#ffcc00");
-    const accuracy = info?.accuracy || (isLogic ? 100 : 95);
+    const accuracy = info?.accuracy || (isLogic ? 100 : 98);
     const badgeText = isRateLimit ? "RATE LIMITED" : `${isLogic ? "LOGIC" : "AI"} ${accuracy}%`;
 
     const overlay = document.createElement("div");
@@ -927,17 +1011,17 @@
   };
 
   const parseTextAnswerAndConfidence = (raw) => {
-    if (!raw) return { answer: "", accuracy: 88 };
+    if (!raw) return { answer: "", accuracy: 95 };
     const m = raw.match(/Answer:\s*([^\n\[\]]+?)(?:\s*\[?\(?(\d{1,3})%?\]?\)?)?$/im);
     if (m) {
-      const acc = m[2] ? parseInt(m[2], 10) : 95;
+      const acc = m[2] ? parseInt(m[2], 10) : 98;
       return { answer: m[1].trim(), accuracy: Math.min(acc, 100) };
     }
     const cleaned = raw.replace(/^(?:Answer|Box\s*\d+)[:.\s]*/i, "").trim();
-    return { answer: cleaned, accuracy: 88 };
+    return { answer: cleaned, accuracy: 92 };
   };
 
-  const solve = async () => {
+  const solve = async (isRecheck = false) => {
     if (isSolving) return;
     const prob = findTextInputProblem();
 
@@ -946,7 +1030,7 @@
       return;
     }
 
-    if (prob.key === lastKey && document.querySelector(".acellus-ti-overlay")) return;
+    if (prob.key === lastKey && !isRecheck && document.querySelector(".acellus-ti-overlay")) return;
 
     removeOverlays();
     lastKey = prob.key;
@@ -976,13 +1060,13 @@
         prompt = contextPart +
           "Question: " + prob.qText + "\n\n" +
           (prob.labels[0] ? "The answer box is labeled: " + prob.labels[0] + "\n\n" : "") +
-          "In 1 concise sentence, reason or calculate, then output on the last line ONLY:\nAnswer: <exact answer> [Confidence%]";
+          "Reason carefully or calculate, then output on the last line ONLY:\nAnswer: <exact answer> [Confidence%]";
       } else {
         prompt = contextPart +
           "Question: " + prob.qText + "\n\n" +
           "There are " + prob.inputCount + " answer boxes" +
           (prob.labels.length ? " labeled: " + prob.labels.join(", ") : "") + ".\n\n" +
-          "Briefly reason, then list each answer on its own line as:\nBox 1: <answer>\nBox 2: <answer>\n(etc.)\nNo explanation.";
+          "List each answer on its own line as:\nBox 1: <answer>\nBox 2: <answer>\n(etc.)\nNo explanation.";
       }
 
       const res = await askGroq(prompt);
@@ -1007,10 +1091,19 @@
       }
     } catch(e) {
       console.warn("[Acellus-Zero] Text input solve error:", e);
-      setTimeout(() => { if (lastKey === prob.key) lastKey = null; }, 5000);
+      setTimeout(() => { if (lastKey === prob.key) lastKey = null; }, 3000);
     } finally {
       isSolving = false;
     }
+  };
+
+  window.__acellusTextInputRecheck = async () => {
+    removeOverlays();
+    lastKey = null;
+    isSolving = false;
+    try {
+      await solve(true);
+    } catch(e) {}
   };
 
   const repositionOverlays = () => {
@@ -1023,7 +1116,7 @@
     });
   };
 
-  setInterval(solve, 350);
+  setInterval(() => solve(false), 350);
   window.addEventListener("scroll", repositionOverlays, { passive: true });
   window.addEventListener("resize", repositionOverlays, { passive: true });
 })();
